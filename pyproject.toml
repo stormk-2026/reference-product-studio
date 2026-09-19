@@ -1,0 +1,40 @@
+[project]
+name = "reference-product-studio"
+version = "0.1.0"
+description = "本地商品视觉逆向与重构工作台"
+requires-python = ">=3.11,<3.12"
+dependencies = [
+    "fastapi>=0.115,<1",
+    "uvicorn>=0.30,<1",
+    "pydantic>=2.9,<3",
+    "sqlalchemy>=2.0,<3",
+    "alembic>=1.13,<2",
+    "jinja2>=3.1,<4",
+    "python-multipart>=0.0.20,<1",
+    "pillow>=11,<13",
+    "python-dotenv>=1.1,<2",
+    "httpx>=0.28,<1",
+    "rembg[cpu]>=2.0.60,<3",
+]
+
+[dependency-groups]
+dev = ["pytest>=8,<10", "ruff>=0.11,<1", "httpx>=0.28,<1"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/studio"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
+markers = ["unit: deterministic domain rules", "integration: offline database/files/web integration", "fixture_workflow: complete fixture workflows"]
+
+[tool.ruff]
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I"]
+ignore = ["E501"]
