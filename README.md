@@ -35,10 +35,11 @@ uv run python -m studio.worker
 
 ## 使用
 
-- **商品解析**：最多 10 张图片 → 逆推完整 Prompt / 白底实物图 / Beta 三视图 → 查看、复制或继续生成。
+- **商品解析**：最多 10 张图片 → 逆推完整 Prompt / 白底实物图 / 说明书草图（三视图）· Beta → 查看、复制或继续生成。
 - **一键混图**：自有商品 + 参考场景 → 先生成一张。同一商品的多角度共同生成一张；多个商品则首张通过后，其余商品沿用同一场景与样张风格批量生成。
 - **参考重构**：参考图 → 视觉配方（可选修改）→ 添加自己的商品 → 生成。
-- **出图后**：下载、收藏、人工检查、可选本地抠图为透明 PNG。
+- **出图后**：下载、收藏、加入待处理列表，或将白底结果直接带入场景混图；支持本地抠图和三种基础宣传文字排版。
+- **AI 对照检查（可选）**：确认后由 Kimi 对照原商品、场景与结果，输出问题位置、修改建议及不确定项。建议可带入修改表单，不自动重绘、不替代人工确认。
 
 上传支持文件选择、拖放、Ctrl/⌘+V 粘贴；图片备注选填。删除从素材库移除，保留历史任务所引用的文件。开发测试素材入口收在高级选项。页面默认真实模式，但每次收费提交仍需核对图片、接收方和次数并确认；API 未指定执行方式时仍默认 Fixture。
 
@@ -59,6 +60,7 @@ uv run pytest -q
 uv run ruff check src tests migrations scripts
 uv run ruff format --check src tests migrations scripts
 node --check src/studio/web/static/app.js
+node --test tests/frontend/upload.cjs
 ```
 
 自动测试禁止真实网络，供应商响应使用模拟数据。现有 `scripts/smoke.py` 可在 Web/Worker 启动后运行，仅产生本地 Fixture 记录。Fixture 不代表视觉生成效果。
@@ -68,3 +70,7 @@ node --check src/studio/web/static/app.js
 详细新流程、批量语义、验证与后续能力见 [简化工作流](docs/SIMPLE_WORKFLOWS.md)。历史阶段见 [M1 报告](docs/M1_REPORT.md)、[M2 接入记录](docs/M2_INTEGRATION_REPORT.md)。
 
 项目维护与已验证行为约束见 [HARNESS.md](HARNESS.md)。
+
+## 说明书插图初稿
+
+上传同一商品的多角度实拍，可生成白底实物配图，或将实拍转换为白底三视图线稿，用作说明书外观插图、部件说明底图及设计沟通草图。当前三视图为正视、侧视、俯视，不自动编写完整说明书。使用前需人工核对部件与视图一致性，再补充部件名称、尺寸或操作说明；输出不作为生产加工图。

@@ -13,9 +13,10 @@ COPY = {
         "outcome_unknown": "结果未知",
     },
     "modes": {
+        "CHECK": "AI 对照检查",
         "A": "逆推完整提示词",
         "A_white": "生成白背景实物图",
-        "A_views": "生成纯净三视图 · Beta",
+        "A_views": "生成说明书草图（三视图）· Beta",
         "CUTOUT": "本地抠图 · 透明 PNG",
         "A_front": "正面技术图候选",
         "A_back": "背面技术图候选",

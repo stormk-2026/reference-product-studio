@@ -21,7 +21,7 @@ def compile_recipe(recipe: Recipe) -> str:
 def require_capabilities(
     mode: str, capabilities: set[str], mask: bool = False, strategy="reference_recipe"
 ):
-    required = {"understand"} if mode in {"A", "C_analyze"} else {"generate"}
+    required = {"understand"} if mode in {"A", "C_analyze", "CHECK"} else {"generate"}
     if mode in {"B2", "C1", "C2"}:
         required = {"edit"}
     if mode == "C1" or (mode == "C2" and strategy == "reference_recipe"):

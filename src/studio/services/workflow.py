@@ -50,6 +50,14 @@ class Workflow:
             return image.convert("RGBA")
 
     def prepare(self, request: Request):
+        if request.mode == "CHECK":
+            from studio.services.quality import check_request
+
+            canonical = check_request(self, request.check_candidate_id)
+            if request != canonical:
+                raise ValueError("检查输入已改变，请从原结果重新预览")
+        elif request.check_candidate_id:
+            raise ValueError("检查关联仅用于 AI 检查")
         require_capabilities(
             request.mode, self.provider.capabilities, bool(request.mask_id), request.strategy
         )
@@ -78,7 +86,7 @@ class Workflow:
             if not request.reference_id:
                 raise ValueError("此路线需要参考图")
         if (
-            request.mode not in {"A", "A_front", "A_back", "A_pattern", "A_white", "A_views"}
+            request.mode not in {"CHECK", "A", "A_front", "A_back", "A_pattern", "A_white", "A_views"}
             and len(request.product_ids) != 1
         ):
             raise ValueError("此路线每次仅使用一张商品图")
@@ -149,6 +157,8 @@ class Workflow:
             raise ValueError("请先解析参考图并选择配方")
         if request.analysis_id:
             linked = self.get(analyses, request.analysis_id)
+            if "fields" not in linked["data"]:
+                raise ValueError("AI 检查报告不能作为商品分析资料")
             if linked["input_ids"] != request.product_ids:
                 raise ValueError("分析与当前商品不匹配，请重新分析或清空分析选择")
         prompt = request.instructions
@@ -210,7 +220,7 @@ class Workflow:
             "plan": payload,
             "compiled_prompt": (
                 image_prompt(request, payload)
-                if request.mode not in {"A", "C_analyze"}
+                if request.mode not in {"A", "C_analyze", "CHECK"}
                 else None
             ),
             "sent_assets": payload["sent_assets"],

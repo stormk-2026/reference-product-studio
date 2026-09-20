@@ -64,12 +64,14 @@ class Request(StrictModel):
         "A_white",
         "A_views",
         "CUTOUT",
+        "CHECK",
         "B1",
         "B2",
         "C_analyze",
         "C1",
         "C2",
     ]
+    check_candidate_id: str | None = None
     product_ids: list[str] = Field(min_length=1, max_length=10)
     product_view_ids: list[str] = Field(default_factory=list, max_length=8)
     background_id: str | None = None
@@ -103,3 +105,18 @@ class Evaluation(StrictModel):
     rework_minutes: float | None = Field(default=None, ge=0, le=10000)
     notes: str = Field(default="", max_length=8000)
     checks: dict[str, Literal["pass", "fail", "unknown"]] = Field(default_factory=dict)
+
+
+class CheckItem(StrictModel):
+    topic: str = Field(max_length=100)
+    status: Literal["issue", "no_obvious_issue", "unknown"]
+    observation: str = Field(max_length=2000)
+    location: str = Field(max_length=500)
+    asset_ids: list[str] = Field(max_length=12)
+    suggestion: str = Field(default="", max_length=1000)
+
+
+class QualityCheck(StrictModel):
+    summary: str = Field(min_length=1, max_length=2000)
+    checks: list[CheckItem] = Field(min_length=1, max_length=20)
+    limitations: str = Field(min_length=1, max_length=2000)

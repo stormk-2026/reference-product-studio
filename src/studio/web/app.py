@@ -139,6 +139,12 @@ def create_app(root=None):
         workflow.store.update(assets, asset_id, {"hidden": True})
         return {"deleted": True, "note": "已从素材库删除，历史任务引用仍保留"}
 
+    @app.post("/api/candidates/{candidate_id}/check-preview")
+    def check_preview(candidate_id: str):
+        from studio.services.quality import check_request
+
+        return workflow.preview(check_request(workflow, candidate_id))
+
     @app.post("/api/batch/{candidate_id}/preview")
     def batch_preview(candidate_id: str):
         return preview_remaining(workflow, candidate_id)

@@ -12,7 +12,7 @@ SEEDREAM_MODEL = "doubao-seedream-5-0-pro-260628"
 
 
 def external_plan(request: Request, settings):
-    understanding = request.mode in {"A", "C_analyze"}
+    understanding = request.mode in {"A", "C_analyze", "CHECK"}
     if understanding:
         if settings.moonshot_base_url.rstrip("/") != KIMI_BASE or settings.kimi_model != "kimi-k3":
             raise ValueError("本次适配器仅支持 Kimi 中国区官方地址和 kimi-k3；未静默替换配置")
@@ -53,7 +53,7 @@ def external_plan(request: Request, settings):
             image_ids.append(request.back_id)
         if request.mode == "B2" and request.change_subject and request.subject_id:
             image_ids.append(request.subject_id)
-        if request.background_id and request.mode not in {"A", "C_analyze"}:
+        if request.background_id and request.mode not in {"A", "C_analyze", "CHECK"}:
             image_ids.append(request.background_id)
         provider, model, recipient = (
             "volcengine",

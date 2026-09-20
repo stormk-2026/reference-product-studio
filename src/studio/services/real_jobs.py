@@ -136,18 +136,18 @@ def run_real(workflow, job, *, provider=None):
         )
 
     workflow.store.update(jobs, job["id"], {"phase": "dispatching"})
-    if request.mode in {"A", "C_analyze"}:
+    if request.mode in {"A", "C_analyze", "CHECK"}:
         result = provider.analyze(
             request.mode, pictures, payload["sent_asset_ids"], payload["prompt"], received
         )
         data = result.value.model_dump()
         if request.mode == "C_analyze" and request.preserve:
             data["preserve"] = request.preserve
-        table = analyses if request.mode == "A" else recipes
+        table = analyses if request.mode in {"A", "CHECK"} else recipes
         record = dict(
             id=identifier(), job_id=job["id"], data=data, version=1, created_at=now(), fixture=False
         )
-        record.update(input_ids=request.product_ids) if request.mode == "A" else record.update(
+        record.update(input_ids=request.product_ids) if request.mode in {"A", "CHECK"} else record.update(
             reference_id=request.reference_id
         )
     else:
