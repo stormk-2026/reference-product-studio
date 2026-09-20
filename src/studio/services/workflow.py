@@ -80,13 +80,24 @@ class Workflow:
         )
         for asset_id in ids:
             self.get(assets, asset_id)
+        if request.mode == "A_white" and (
+            len(request.product_ids) != 1
+            or request.product_view_ids
+            or request.back_id
+            or request.reference_id
+            or request.background_id
+            or request.subject_id
+            or request.mask_id
+        ):
+            raise ValueError("白底图仅使用 1 张商品实拍，不接受辅助角度或参考图片")
         if request.mode in {"C_analyze", "C1"} or (
             request.mode == "C2" and request.strategy == "reference_recipe"
         ):
             if not request.reference_id:
                 raise ValueError("此路线需要参考图")
         if (
-            request.mode not in {"CHECK", "A", "A_front", "A_back", "A_pattern", "A_white", "A_views"}
+            request.mode
+            not in {"CHECK", "A", "A_front", "A_back", "A_pattern", "A_white", "A_views"}
             and len(request.product_ids) != 1
         ):
             raise ValueError("此路线每次仅使用一张商品图")

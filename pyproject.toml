@@ -1,6 +1,6 @@
 [project]
 name = "reference-product-studio"
-version = "0.1.0"
+version = "0.1.0b1"
 description = "本地商品视觉逆向与重构工作台"
 requires-python = ">=3.11,<3.12"
 dependencies = [

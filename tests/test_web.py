@@ -33,7 +33,9 @@ def test_host_origin_and_csrf(client):
 def test_read_only_root_and_safety_headers(client):
     result = client.get("/")
     assert result.status_code == 200
-    assert "本地流程演示" in result.text
+    assert "生成宣传图物料" in result.text
+    assert "生成说明书工业草图" in result.text
+    assert "载入开发测试素材" not in result.text
     assert "default-src 'self'" in result.headers["content-security-policy"]
     assert client.get("/api/assets/not-a-file").status_code == 404
 

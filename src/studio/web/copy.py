@@ -1,5 +1,5 @@
 COPY = {
-    "title": "商品视觉工作台",
+    "title": "Storm Studio.",
     "subtitle": "从观察到重构，每一步都有依据。",
     "fixture": "默认 Fixture · 本地保存 · 真实调用逐次确认",
     "fixture_note": "Fixture 只验证流程。真实适配器已接入，尚待真实样例验证；选择真实模式后须逐次确认外发和费用。",

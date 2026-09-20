@@ -2,6 +2,8 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from studio.domain.canvas import CanvasRatio
+
 
 class StrictModel(BaseModel):
     model_config = ConfigDict(extra="forbid")
@@ -89,7 +91,7 @@ class Request(StrictModel):
     instructions: str = Field(default="", max_length=8000)
     preserve: str = Field(default="", max_length=4000)
     strategy: Literal["reference_recipe", "text_only"] = "reference_recipe"
-    ratio: Literal["1:1", "4:5", "16:9"] = "1:1"
+    ratio: CanvasRatio = "1:1"
     scale: float = Field(default=0.7, ge=0.1, le=0.9)
     x: float = Field(default=0.5, ge=0, le=1)
     y: float = Field(default=0.5, ge=0, le=1)

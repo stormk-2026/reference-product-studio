@@ -14,6 +14,7 @@ from pydantic import Field
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from studio.config import data_dir
+from studio.domain.canvas import CANVAS_SIZES
 from studio.domain.models import (
     FIXTURE_WARNING,
     RECIPE_FIELDS,
@@ -99,7 +100,7 @@ def create_app(root=None):
         return templates.TemplateResponse(
             request=request,
             name="index.html",
-            context={"copy": COPY, "recipe_fields": RECIPE_FIELDS},
+            context={"copy": COPY, "recipe_fields": RECIPE_FIELDS, "canvas_ratios": CANVAS_SIZES},
         )
 
     @app.get("/api/session")

@@ -3,6 +3,7 @@ import fcntl
 import time
 
 from studio.config import data_dir
+from studio.domain.canvas import canvas_size
 from studio.domain.models import FIXTURE_WARNING, PATTERN_WARNING, Request
 from studio.domain.rules import back_label
 from studio.providers.domestic import ProviderError
@@ -63,7 +64,7 @@ def run_once(workflow):
                 reference_id=request.reference_id,
             )
         else:
-            size = {"1:1": (768, 768), "4:5": (768, 960), "16:9": (1024, 576)}[request.ratio]
+            size = canvas_size(request.ratio, fixture=True)
             label = back_label(bool(request.back_id)) if request.mode == "A_back" else request.mode
             image = workflow.provider.render(request.mode, size, request.background, label)
             transforms = []

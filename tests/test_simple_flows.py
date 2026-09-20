@@ -80,6 +80,23 @@ def test_white_and_views_routes(workflow):
         assert workflow.detail(job["id"])["candidate"]
 
 
+def test_white_requires_one_photo_and_preserves_its_view(workflow, tmp_path):
+    a, b = upload(workflow, False), upload(workflow, False)
+    with pytest.raises(ValueError, match="白底图仅使用 1 张"):
+        workflow.prepare(Request(mode="A_white", product_ids=[a, b]))
+    for field in ["back_id", "reference_id", "background_id", "subject_id", "mask_id"]:
+        with pytest.raises(ValueError, match="不接受辅助角度"):
+            workflow.prepare(Request(mode="A_white", product_ids=[a], **{field: b}))
+    request = Request(mode="A_white", product_ids=[a])
+    assert external_plan(request, settings(tmp_path))["sent_asset_ids"] == [a]
+    prompt = image_prompt(request, workflow.prepare(request))
+    assert "保持原图的观察视角" in prompt
+    assert "不拼接正侧背面" in prompt
+    assert "不补画不可见结构" in prompt
+    # The single-photo restriction does not remove multi-view drawing support.
+    workflow.prepare(Request(mode="A_views", product_ids=[a, b]))
+
+
 def test_cutout_job_uses_local_mask_and_keeps_history(workflow, monkeypatch):
     from PIL import Image
 
