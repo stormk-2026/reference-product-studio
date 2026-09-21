@@ -18,3 +18,16 @@ data/
 .idea/
 .vscode/
 *.onnx
+wheelhouse/
+
+# Deployment credentials, private overrides and backup archives
+runtime.env
+*.pem
+*.key
+*.p12
+*.pfx
+*.local.yaml
+*.local.yml
+backups/
+*.tar.gz
+*.partial

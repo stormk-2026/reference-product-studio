@@ -43,16 +43,17 @@ def safe_path(root: Path, relative: str) -> Path:
     return path
 
 
-def save_image(root: Path, image: Image.Image, source: str, fixture: bool):
+def save_image(root: Path, image: Image.Image, source: str, fixture: bool, *, storage=None):
+    from studio.config import Settings
+    from studio.storage.backend import AssetStorage
+
     resource_id = identifier()
-    for directory in ("tmp", "assets"):
-        (root / directory).mkdir(parents=True, exist_ok=True)
-    temporary = root / "tmp" / f"{resource_id}.png"
-    # Re-encode without EXIF; stored hash refers to sanitized local PNG.
-    image.save(temporary, "PNG")
-    content = temporary.read_bytes()
-    relative = f"assets/{resource_id}.png"
-    temporary.replace(safe_path(root, relative))
+    stream = io.BytesIO()
+    # Hash the sanitized PNG identically for both storage backends.
+    image.save(stream, "PNG")
+    content = stream.getvalue()
+    storage = storage or AssetStorage(root, Settings(storage_dir=root))
+    relative = storage.write(resource_id, content)
     return dict(
         id=resource_id,
         path=relative,

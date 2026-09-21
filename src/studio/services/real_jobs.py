@@ -11,7 +11,6 @@ from studio.providers.fixture import font
 from studio.repositories.db import analyses, assets, candidates, identifier, jobs, now, recipes
 from studio.services.composite import composite
 from studio.services.external import external_plan
-from studio.storage.images import safe_path
 
 REAL_WARNING = "真实模型输出，尚需人工核验；不保证商品细节或不可见结构准确。"
 
@@ -120,7 +119,7 @@ def run_real(workflow, job, *, provider=None):
     pictures = []
     for asset in payload["sent_assets"]:
         stored = workflow.get(assets, asset["id"])
-        content = safe_path(workflow.root, stored["path"]).read_bytes()
+        content = workflow.storage.read_asset(stored)
         if hashlib.sha256(content).hexdigest() != asset["sha256"]:
             raise ProviderError("外发素材内容改变，需要重新授权；本次未外发")
         pictures.append(content)
@@ -181,7 +180,12 @@ def run_real(workflow, job, *, provider=None):
                 font=font(max(12, min(28, result.image.width // 22))),
                 fill="#79552e",
             )
-        original = workflow.store_image(result.image, "真实模型原始输出（尚未人工核验）", False)
+        original = workflow.store_image(
+            result.image,
+            "真实模型原始输出（尚未人工核验）",
+            False,
+            preserve_on_storage_failure=True,
+        )
         size = canvas_size(request.ratio)
         image = ImageOps.pad(
             result.image, size, color=request.background, method=Image.Resampling.LANCZOS
@@ -213,7 +217,15 @@ def run_real(workflow, job, *, provider=None):
                 fill="#79552e",
             )
             transforms.append("本地加注不可移除的导出警示/设计假设标签（非模型输出文字）")
-        asset = workflow.store_image(image, "真实模型候选（需人工核验）", False)
+        asset = workflow.store_image(
+            image, "真实模型候选（需人工核验）", False, preserve_on_storage_failure=True
+        )
+        if workflow.settings.asset_backend == "oss" and any(
+            not item["path"].startswith("oss://") for item in (original, asset)
+        ):
+            storage_notice = "OSS 写入失败，图片已保留在服务器本地；未重新调用生图模型。"
+            transforms.append(storage_notice)
+            warning += " " + storage_notice
         data = dict(
             feature=request.mode[0],
             mode=request.mode,

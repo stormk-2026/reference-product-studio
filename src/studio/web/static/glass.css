@@ -1,4 +1,4 @@
-/* Adapted from the user's Stitch screen 8164f1c1c99f42748bf64b2628feb491.
+/* Adapted from the user-provided Stitch glass workspace design.
    Local CSS replaces its Tailwind CDN; no remote images, fonts or fake controls. */
 :root{--ink:#0f172a;--muted:#64748b;--line:rgba(226,232,240,.65);--accent:#2563eb;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;color:var(--ink);background:#f8fafc}
 body{background-color:#f8fafc;background-image:radial-gradient(at 10% 12%,rgba(224,231,255,.55) 0,transparent 50%),radial-gradient(at 90% 10%,rgba(243,232,255,.5) 0,transparent 45%),radial-gradient(at 50% 60%,rgba(238,242,255,.6) 0,transparent 60%),radial-gradient(at 85% 85%,rgba(224,242,254,.5) 0,transparent 55%);background-attachment:fixed;min-height:100vh}

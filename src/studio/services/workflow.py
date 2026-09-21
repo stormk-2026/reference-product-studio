@@ -1,3 +1,4 @@
+import io
 from pathlib import Path
 
 from PIL import Image
@@ -18,7 +19,8 @@ from studio.repositories.db import (
 )
 from studio.repositories.store import Store
 from studio.services.external import ApprovalSigner, external_plan
-from studio.storage.images import decode, safe_path, save_image
+from studio.storage.backend import AssetStorage, StorageError
+from studio.storage.images import decode, save_image
 
 
 class Workflow:
@@ -27,6 +29,7 @@ class Workflow:
         self.store = Store(engine)
         self.provider = FixtureProvider()
         self.settings = settings or load_settings()
+        self.storage = AssetStorage(root, self.settings)
         self.approvals = ApprovalSigner()
 
     def get(self, table, resource_id):
@@ -40,13 +43,19 @@ class Workflow:
             raise ValueError("图片备注不能超过1000字")
         return self.store_image(decode(data, mime), source.strip() or "未备注图片", fixture)
 
-    def store_image(self, image, source, fixture):
-        item = save_image(self.root, image, source, fixture)
+    def store_image(self, image, source, fixture, *, preserve_on_storage_failure=False):
+        try:
+            item = save_image(self.root, image, source, fixture, storage=self.storage)
+        except StorageError:
+            if not preserve_on_storage_failure or self.settings.asset_backend != "oss":
+                raise
+            # A paid response must not be discarded or re-generated because OSS is unavailable.
+            item = save_image(self.root, image, source + " · OSS 写入失败，已保留在服务器", fixture)
         return self.store.insert(assets, item)
 
     def image(self, asset_id):
         item = self.get(assets, asset_id)
-        with Image.open(safe_path(self.root, item["path"])) as image:
+        with Image.open(io.BytesIO(self.storage.read_asset(item))) as image:
             return image.convert("RGBA")
 
     def prepare(self, request: Request):

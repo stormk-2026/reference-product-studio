@@ -1,0 +1,10 @@
+{
+  "Version": "1",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": ["oss:GetObject", "oss:PutObject", "oss:PutObjectAcl"],
+      "Resource": ["acs:oss:*:*:YOUR_BUCKET_NAME/storm-studio/assets/*"]
+    }
+  ]
+}

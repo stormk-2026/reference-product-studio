@@ -1,7 +1,7 @@
 'use strict';
 const $ = id => document.getElementById(id);
 const S = { csrf:'', tab:'A', data:{assets:[],jobs:[],analyses:[],recipes:[],candidates:[],evaluations:[]}, copy:{}, selected:null, resultStamp:null, submitKey:null, pendingPayload:null, approval:null };
-const UI = {emptyJobs:'暂无任务。先选择素材并创建任务。', saved:'已保存到本地。', failed:'操作失败', upload:'素材已保存；请在商品或参考下拉框中选择。', demo:'测试素材已载入。商品为本地绘制的透明 PNG，参考为固定测试场景。', queued:'任务已入队，由独立 Worker 执行。', noProduct:'请选择商品图片。', noCompare:'请选择 C1 和 C2 候选。', mismatch:'这两个候选的商品或参考不同，不能作为同素材对照。', fixture:'测试夹具 / 非模型生成', none:'未评价', cost:'费用 unknown · Fixture 无收费调用'};
+const UI = {emptyJobs:'暂无任务。先选择素材并创建任务。', saved:'已保存。', failed:'操作失败', upload:'素材已保存；请在商品或参考下拉框中选择。', demo:'测试素材已载入。商品为本地绘制的透明 PNG，参考为固定测试场景。', queued:'任务已入队，由独立 Worker 执行。', noProduct:'请选择商品图片。', noCompare:'请选择 C1 和 C2 候选。', mismatch:'这两个候选的商品或参考不同，不能作为同素材对照。', fixture:'测试夹具 / 非模型生成', none:'未评价', cost:'费用 unknown · Fixture 无收费调用'};
 function node(tag,text,cls){const e=document.createElement(tag);if(text!==undefined)e.textContent=text;if(cls)e.className=cls;return e;}
 function message(text,error=false){$('message').textContent=text;$('message').className=error?'error':'';}
 function bind(id,event,fn){$(id).addEventListener(event,async e=>{try{await fn(e);}catch(err){message(err.message,true);}});}

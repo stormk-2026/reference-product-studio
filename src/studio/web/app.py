@@ -6,7 +6,7 @@ from pathlib import Path
 
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi import Request as WebRequest
-from fastapi.responses import FileResponse, JSONResponse, Response
+from fastapi.responses import JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from PIL import Image, ImageDraw
@@ -36,7 +36,8 @@ from studio.repositories.db import (
 )
 from studio.services.batch import preview_remaining, submit_remaining
 from studio.services.workflow import Workflow
-from studio.storage.images import MAX_BYTES, safe_path
+from studio.storage.backend import StorageError
+from studio.storage.images import MAX_BYTES
 from studio.web.copy import COPY
 
 
@@ -94,6 +95,10 @@ def create_app(root=None):
     @app.exception_handler(ValueError)
     async def bad_input(request, exc):
         return JSONResponse({"detail": str(exc)}, status_code=400)
+
+    @app.exception_handler(StorageError)
+    async def storage_error(request, exc):
+        return JSONResponse({"detail": str(exc)}, status_code=503)
 
     @app.get("/")
     def home(request: WebRequest):
@@ -167,13 +172,16 @@ def create_app(root=None):
     def asset(asset_id: str, download: bool = False):
         try:
             item = workflow.get(assets, asset_id)
-            path = safe_path(root, item["path"])
-            if not path.is_file():
-                raise ValueError("资源文件缺失")
+            content = workflow.storage.read_asset(item)
+        except StorageError:
+            raise
+        except FileNotFoundError as exc:
+            raise HTTPException(404, "资源不存在") from exc
         except ValueError as exc:
             raise HTTPException(404, "资源不存在") from exc
         filename = f"{'FIXTURE-' if item['fixture'] else ''}{asset_id}.png" if download else None
-        return FileResponse(path, media_type="image/png", filename=filename)
+        headers = {"Content-Disposition": f'attachment; filename="{filename}"'} if filename else {}
+        return Response(content, media_type="image/png", headers=headers)
 
     @app.post("/api/jobs")
     def submit(payload: Request, request: WebRequest):
@@ -237,7 +245,7 @@ def create_app(root=None):
             )
             if candidate:
                 item = workflow.get(assets, candidate["asset_id"])
-                archive.write(safe_path(root, item["path"]), f"{prefix}-result.png")
+                archive.writestr(f"{prefix}-result.png", workflow.storage.read_asset(item))
                 archive.writestr("READ-ME.txt", notice + "\n" + candidate["data"]["warning"])
         return Response(
             stream.getvalue(),
