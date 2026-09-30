@@ -1,5 +1,6 @@
 import argparse
 import fcntl
+import os
 import time
 
 from studio.config import data_dir
@@ -146,18 +147,37 @@ def main():
     parser.add_argument("--once", action="store_true")
     args = parser.parse_args()
     root = data_dir()
-    workflow = Workflow(engine_for(root), root)
+    multiuser = os.environ.get("STUDIO_AUTH_ENABLED") == "1"
+    if multiuser:
+        from studio.services.accounts import Accounts
+        from studio.services.tenants import Tenants
+
+        accounts = Accounts(root)
+        tenants = Tenants(accounts)
+        recovered = set()
+    else:
+        workflow = Workflow(engine_for(root), root)
     with (root / "worker.lock").open("a") as lock:
         try:
             fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
         except BlockingIOError:
             raise SystemExit("已有 Worker 在运行")
-        recover(workflow)
+        if not multiuser:
+            recover(workflow)
         print(
             "Worker 已启动；Fixture 默认。真实调用仅执行已确认的单次任务，无自动重试。", flush=True
         )
         while True:
-            worked = run_once(workflow)
+            worked = False
+            if multiuser:
+                for user in accounts.users():
+                    selected = tenants.workflow(user)
+                    if user["id"] not in recovered:
+                        recover(selected)
+                        recovered.add(user["id"])
+                    worked = run_once(selected) or worked
+            else:
+                worked = run_once(workflow)
             if args.once:
                 return
             if not worked:

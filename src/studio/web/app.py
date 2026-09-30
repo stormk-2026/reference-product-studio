@@ -1,16 +1,18 @@
 import io
 import json
+import os
 import secrets
 import zipfile
 from pathlib import Path
 
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi import Request as WebRequest
-from fastapi.responses import JSONResponse, Response
+from fastapi.responses import JSONResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from PIL import Image, ImageDraw
 from pydantic import Field
+from starlette.concurrency import run_in_threadpool
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from studio.config import data_dir
@@ -34,8 +36,11 @@ from studio.repositories.db import (
     jobs,
     recipes,
 )
+from studio.repositories.store import QuotaError
+from studio.services.accounts import Accounts, AuthError
 from studio.services.batch import preview_remaining, submit_remaining
 from studio.services.content_batch import preview_series, series_status, submit_series
+from studio.services.tenants import Tenants, WorkflowProxy, current_workflow
 from studio.services.workflow import Workflow
 from studio.storage.backend import StorageError
 from studio.storage.images import MAX_BYTES
@@ -51,11 +56,23 @@ class FavoriteBody(StrictModel):
     favorite: bool
 
 
-def create_app(root=None):
+class Credentials(StrictModel):
+    username: str = Field(min_length=3, max_length=32)
+    password: str = Field(min_length=10, max_length=128)
+
+
+def create_app(root=None, *, auth_enabled=None):
     root = root or data_dir()
-    workflow = Workflow(engine_for(root), root)
+    auth_enabled = (
+        (os.environ.get("STUDIO_AUTH_ENABLED") == "1") if auth_enabled is None else auth_enabled
+    )
+    accounts = Accounts(root) if auth_enabled else None
+    tenants = Tenants(accounts) if accounts else None
+    workflow = WorkflowProxy() if auth_enabled else Workflow(engine_for(root), root)
     app = FastAPI(title=COPY["title"], docs_url=None, redoc_url=None, openapi_url=None)
     app.state.workflow = workflow
+    app.state.accounts = accounts
+    app.state.tenants = tenants
     web = Path(__file__).parent
     app.mount("/static", StaticFiles(directory=web / "static"), name="static")
     templates = Jinja2Templates(directory=web / "templates")
@@ -88,7 +105,51 @@ def create_app(root=None):
                     return JSONResponse({"detail": "请求超过大小上限"}, status_code=413)
                 chunks.append(chunk)
             request._body = b"".join(chunks)
-        response = await call_next(request)
+        context_token = None
+        if accounts:
+            user = await run_in_threadpool(
+                accounts.resolve, request.cookies.get("studio_session", "")
+            )
+            request.state.user = user
+            public = request.url.path in {
+                "/login",
+                "/api/session",
+                "/api/auth/login",
+                "/api/auth/register",
+            } or request.url.path.startswith("/static/")
+            if not public and not user:
+                return (
+                    RedirectResponse("/login", status_code=303)
+                    if request.url.path == "/"
+                    else JSONResponse({"detail": "请先登录"}, status_code=401)
+                )
+            if user:
+                selected = await run_in_threadpool(tenants.workflow, user)
+                context_token = current_workflow.set(selected)
+            if request.method == "POST" and request.url.path in {
+                "/api/auth/login",
+                "/api/auth/register",
+            }:
+                peer = request.client.host if request.client else "unknown"
+                if os.environ.get("STUDIO_TRUST_PROXY") == "1":
+                    peer = request.headers.get("x-real-ip", peer)
+                scope = "register" if request.url.path.endswith("register") else "login"
+                try:
+                    await run_in_threadpool(
+                        accounts.throttle,
+                        scope + ":" + peer,
+                        3 if scope == "register" else 15,
+                        86400 if scope == "register" else 900,
+                    )
+                except AuthError as exc:
+                    if context_token is not None:
+                        current_workflow.reset(context_token)
+                    return JSONResponse({"detail": str(exc)}, status_code=429)
+        try:
+            response = await call_next(request)
+        finally:
+            if context_token is not None:
+                current_workflow.reset(context_token)
         response.headers["Content-Security-Policy"] = (
             "default-src 'self'; img-src 'self' blob:; script-src 'self'; style-src 'self'; frame-ancestors 'none'; form-action 'self'; base-uri 'none'"
         )
@@ -101,6 +162,14 @@ def create_app(root=None):
         TrustedHostMiddleware, allowed_hosts=["localhost", "127.0.0.1", "[::1]", "stormstudio.top"]
     )
 
+    @app.exception_handler(QuotaError)
+    async def quota_error(request, exc):
+        return JSONResponse({"detail": str(exc)}, status_code=403)
+
+    @app.exception_handler(AuthError)
+    async def auth_error(request, exc):
+        return JSONResponse({"detail": str(exc)}, status_code=400)
+
     @app.exception_handler(ValueError)
     async def bad_input(request, exc):
         return JSONResponse({"detail": str(exc)}, status_code=400)
@@ -108,6 +177,61 @@ def create_app(root=None):
     @app.exception_handler(StorageError)
     async def storage_error(request, exc):
         return JSONResponse({"detail": str(exc)}, status_code=503)
+
+    @app.get("/login")
+    def login_page(request: WebRequest):
+        if not accounts or request.state.user:
+            return RedirectResponse("/", status_code=303)
+        return templates.TemplateResponse(request=request, name="login.html", context={})
+
+    def logged_in(user, request):
+        response = JSONResponse({"username": user["username"], "owner": bool(user["owner"])})
+        response.set_cookie(
+            "studio_session",
+            accounts.issue(user),
+            max_age=7 * 86400,
+            httponly=True,
+            samesite="lax",
+            secure=request.url.hostname == "stormstudio.top",
+        )
+        # Login rotates any anonymous or previous authenticated session.
+        accounts.logout(request.cookies.get("studio_session", ""))
+        return response
+
+    @app.post("/api/auth/register")
+    def register(body: Credentials, request: WebRequest):
+        if not accounts:
+            raise HTTPException(404)
+        user = accounts.create(body.username, body.password)
+        tenants.workflow(user)
+        return logged_in(user, request)
+
+    @app.post("/api/auth/login")
+    def login(body: Credentials, request: WebRequest):
+        if not accounts:
+            raise HTTPException(404)
+        accounts.throttle("username:" + body.username.lower().strip(), 30, 900)
+        return logged_in(accounts.login(body.username, body.password), request)
+
+    @app.post("/api/auth/logout")
+    def logout(request: WebRequest):
+        if accounts:
+            accounts.logout(request.cookies.get("studio_session", ""))
+        response = JSONResponse({"ok": True})
+        response.delete_cookie("studio_session")
+        return response
+
+    @app.get("/api/account")
+    def account(request: WebRequest):
+        if not accounts:
+            return {"enabled": False}
+        user = request.state.user
+        return {
+            "enabled": True,
+            "username": user["username"],
+            "owner": bool(user["owner"]),
+            "quota": workflow.store.quota(),
+        }
 
     @app.get("/")
     def home(request: WebRequest):
@@ -120,7 +244,15 @@ def create_app(root=None):
     @app.get("/api/session")
     def session(request: WebRequest):
         token = request.cookies.get("studio_csrf") or secrets.token_urlsafe(32)
-        response = JSONResponse({"csrf": token, "copy": COPY, "recipe_fields": RECIPE_FIELDS})
+        response = JSONResponse(
+            {
+                "csrf": token,
+                "copy": COPY,
+                "recipe_fields": RECIPE_FIELDS,
+                "auth_enabled": auth_enabled,
+                "authenticated": bool(getattr(request.state, "user", None)),
+            }
+        )
         response.set_cookie(
             "studio_csrf",
             token,
@@ -152,6 +284,12 @@ def create_app(root=None):
     async def upload(
         file: UploadFile = File(), source: str = Form(""), fixture: bool = Form(False)
     ):
+        if accounts and current_workflow.get().store.quota_limit is not None:
+            if fixture:
+                raise HTTPException(403, "不支持上传测试素材")
+            existing = workflow.list(assets, 10000)
+            if len(existing) >= 100 or sum(a["bytes"] for a in existing) >= 100 * 1024 * 1024:
+                raise HTTPException(403, "体验账号最多保存 100 张图片或 100 MB 素材")
         content = await file.read(MAX_BYTES + 1)
         return workflow.upload(content, file.content_type, source, fixture)
 
@@ -326,6 +464,8 @@ def create_app(root=None):
 
     @app.post("/api/demo")
     def demo():
+        if accounts:
+            raise HTTPException(404)
         # Drawn locally: these are test assets, never real model or merchant content.
         product = Image.new("RGBA", (600, 700), (0, 0, 0, 0))
         draw = ImageDraw.Draw(product)

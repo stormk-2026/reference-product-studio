@@ -34,9 +34,11 @@ services:
       - ${STUDIO_ENV_FILE:-/opt/storm-studio/config/runtime.env}
     environment:
       STUDIO_DATA_DIR: /var/lib/storm-studio
+      STUDIO_AUTH_ENABLED: "1"
+      STUDIO_TRUST_PROXY: "1"
     volumes:
       - ${STUDIO_DATA_PATH:-/opt/storm-studio/data}:/var/lib/storm-studio
-    # Keep the app on loopback; public access requires an authenticated HTTPS proxy.
+    # Keep the app on loopback; HTTPS proxy forwards to application account authentication.
     ports:
       - "127.0.0.1:18765:8765"
     mem_limit: 384m
@@ -55,6 +57,8 @@ services:
       - ${STUDIO_ENV_FILE:-/opt/storm-studio/config/runtime.env}
     environment:
       STUDIO_DATA_DIR: /var/lib/storm-studio
+      STUDIO_AUTH_ENABLED: "1"
+      STUDIO_TRUST_PROXY: "1"
     volumes:
       - ${STUDIO_DATA_PATH:-/opt/storm-studio/data}:/var/lib/storm-studio
     mem_limit: 1536m
@@ -73,6 +77,8 @@ services:
       - ${STUDIO_ENV_FILE:-/opt/storm-studio/config/runtime.env}
     environment:
       STUDIO_DATA_DIR: /var/lib/storm-studio
+      STUDIO_AUTH_ENABLED: "1"
+      STUDIO_TRUST_PROXY: "1"
     volumes:
       - ${STUDIO_DATA_PATH:-/opt/storm-studio/data}:/var/lib/storm-studio:ro
       - ${STUDIO_BACKUP_PATH:-/opt/storm-studio/backups}:/backups

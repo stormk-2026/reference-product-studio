@@ -35,8 +35,8 @@ def submit_series(workflow, candidate_id, token):
     results = []
     for index, payload in enumerate(plan["plans"], 1):
         payload["external_authorized"] = True
-        results.append(workflow.store.enqueue(f"content-series-{candidate_id}-{index}", payload))
-    return results
+        results.append((f"content-series-{candidate_id}-{index}", payload))
+    return workflow.store.enqueue_many(results)
 
 
 def series_status(workflow, candidate_id):

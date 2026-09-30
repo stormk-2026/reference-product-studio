@@ -59,6 +59,20 @@ class Workflow:
             return image.convert("RGBA")
 
     def prepare(self, request: Request):
+        if self.store.quota_limit is not None:
+            allowed = {
+                "A_white",
+                "A_views",
+                "B2",
+                "CONTENT_COPY",
+                "CONTENT_POLISH",
+                "CONTENT_SCENE",
+                "CUTOUT",
+            }
+            if request.mode not in allowed or (
+                request.mode != "CUTOUT" and request.execution != "real"
+            ):
+                raise ValueError("此账号只支持当前正式工具，不支持测试模式或旧版接口")
         if request.mode.startswith("CONTENT_"):
             from studio.services.content import prepare_content
 
@@ -246,7 +260,15 @@ class Workflow:
             "plan": payload,
             "compiled_prompt": (
                 image_prompt(request, payload)
-                if request.mode not in {"A", "C_analyze", "CHECK", "CONTENT_COPY", "CONTENT_POLISH", "CONTENT_SCENE"}
+                if request.mode
+                not in {
+                    "A",
+                    "C_analyze",
+                    "CHECK",
+                    "CONTENT_COPY",
+                    "CONTENT_POLISH",
+                    "CONTENT_SCENE",
+                }
                 else None
             ),
             "sent_assets": payload["sent_assets"],

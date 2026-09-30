@@ -28,8 +28,8 @@ server {
     add_header Strict-Transport-Security "max-age=86400" always;
     add_header X-Content-Type-Options nosniff always;
 
-    auth_basic "Storm Studio private beta";
-    auth_basic_user_file /etc/nginx/studio.htpasswd;
+    # Application login/register protects all data routes.
+    # Enable STUDIO_AUTH_ENABLED=1 and bootstrap the owner BEFORE removing old Basic Auth.
 
     client_max_body_size 16m;
 

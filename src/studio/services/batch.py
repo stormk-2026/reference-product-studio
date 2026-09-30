@@ -44,5 +44,5 @@ def submit_remaining(workflow, candidate_id, token):
     for index, payload in enumerate(plan["plans"], 1):
         payload["external_authorized"] = payload["request"]["execution"] == "real"
         # Stable across fresh previews/reloads. Never resubmit failed or unknown jobs.
-        results.append(workflow.store.enqueue(f"batch-{candidate_id}-{index}", payload))
-    return results
+        results.append((f"batch-{candidate_id}-{index}", payload))
+    return workflow.store.enqueue_many(results)
