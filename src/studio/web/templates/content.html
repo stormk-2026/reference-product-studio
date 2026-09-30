@@ -1,0 +1,24 @@
+<section id="content-studio" aria-label="宣传图文工作区">
+ <div class="content-heading"><p class="eyebrow">SCREENSHOTS & STORIES</p><h2>让真实素材，讲清产品价值</h2><p>选择方案，添加素材与真实卖点。先看文案，再看样稿，最后导出整套。</p></div>
+ <div class="content-layout">
+ <form id="content-form" class="glass-card content-config">
+  <h3>1 · 选择内容方案</h3><div class="content-kind"><button type="button" data-content-kind="app" aria-pressed="true"><b>App 宣传展示</b><small>提供真实界面截图<br>功能亮点 · 操作流程</small></button><button type="button" data-content-kind="product" aria-pressed="false"><b>商品种草图</b><small>提供商品实拍 / 展示图<br>商品卖点 · 使用场景</small></button></div>
+  <h3 id="content-assets-title">2 · 添加 App 截图</h3>
+  <div id="content-drop" class="content-drop" tabindex="0" role="region" aria-label="宣传素材上传区"><b id="content-upload-hint">拖入或粘贴真实 App 截图</b><p>1–6 张 · PNG / JPEG / WebP · 每张 ≤ 15 MB</p><button id="content-upload" type="button" class="secondary">本地上传</button><button id="content-library" type="button" class="secondary">从图片资产选择</button><input id="content-file" type="file" accept="image/png,image/jpeg,image/webp" multiple hidden></div>
+  <div id="content-inputs" class="content-inputs"></div><div id="content-library-list" class="content-library-list" hidden></div>
+  <h3>3 · 写下已知信息</h3><label for="content-name" id="content-name-label">App 名称</label><input id="content-name" required maxlength="48" placeholder="例如：我的记账 App">
+  <label for="content-audience">适合谁（选填）</label><input id="content-audience" maxlength="100" placeholder="例如：想轻松记录日常开支的人">
+  <label for="content-facts">真实功能与卖点</label><textarea id="content-facts" required rows="4" maxlength="1800" placeholder="逐条写下真实具备的功能、特点与限制，AI 只根据这些资料起草。"></textarea>
+  <label for="content-experience">你的真实使用感受（选填）</label><textarea id="content-experience" rows="2" maxlength="600" placeholder="没有提供体验时，不会要求 AI 冒充亲测或使用第一人称背书。"></textarea>
+  <div class="content-options"><label>页数<select id="content-count"><option value="3">3 页 · 简洁介绍</option><option value="4">4 页</option><option value="5">5 页</option><option value="6">6 页 · 完整介绍</option></select></label><label>视觉风格<select id="content-style"><option value="clean">清爽蓝白</option><option value="bold">深色展示</option><option value="warm">温暖奶油</option></select></label><label>品牌强调色<input id="content-accent" type="color" value="#2563eb"></label></div>
+  <p class="hint">3:4 · 1152×1536 · 保留原图内容、等比排版。AI 文案仍需核对，不自动发布。</p>
+  <button type="submit" id="content-copy" class="primary">AI 起草整套文案</button><button type="button" id="content-manual" class="secondary">自己写文案 · 无模型费用</button>
+ </form>
+ <div class="content-work">
+  <div id="content-status" class="content-status" role="status" aria-live="polite">先添加素材与信息，右侧会呈现可编辑的逐页方案。</div>
+  <section id="content-approval" class="glass-card" hidden><h3 id="content-approval-title">确认本次模型调用</h3><p id="content-approval-summary"></p><details><summary>查看将发送的图片与文字</summary><div id="content-sent-images" class="content-inputs"></div><pre id="content-sent-text"></pre></details><label class="check"><input type="checkbox" id="content-consent"><span id="content-consent-label">同意本次按显示次数调用模型；费用以供应商账单为准，不自动重试。</span></label><button id="content-confirm" class="primary" type="button">确认并开始</button><button id="content-cancel" class="secondary" type="button">取消</button></section>
+  <section id="content-editor" class="glass-card" hidden><div class="section-head"><h3>逐页文案</h3><span>确认文字，再生成视觉图</span></div><p id="content-notes" class="hint"></p><div id="content-page-editors"></div><label for="content-post-title">发布标题</label><input id="content-post-title" maxlength="40"><label for="content-post-body">发布正文（与图片文字分开）</label><textarea id="content-post-body" maxlength="1800" rows="6"></textarea><button id="content-copy-post" type="button" class="secondary">复制发布标题与正文</button><div class="content-polish"><label for="content-polish-note">可选：Kimi 二次润色方向</label><input id="content-polish-note" maxlength="500" placeholder="例如：更口语化、更适合小红书；只改表达，不添新事实"><button id="content-polish" type="button" class="secondary">让 Kimi 润色 · 保留原版</button><button id="content-restore-copy" type="button" class="secondary" hidden>恢复润色前文案</button><details id="content-original" hidden><summary>查看润色前的文案</summary><pre id="content-original-text"></pre></details></div><button id="content-sample" type="button" class="primary">用 Seedream 生成首页视觉样张</button><p class="hint">Seedream 生成环境、色彩与光影；真实截图/商品图及文字由程序叠放。请人工核对细节。每页单独调用，首页通过后才可确认余下页。</p></section>
+  <section id="content-output" class="glass-card" hidden><div class="section-head"><h3 id="content-output-title">样稿预览</h3><span>3:4 · PNG</span></div><div id="content-pages" class="content-pages"></div><div id="content-output-actions" class="result-actions"></div></section>
+ </div>
+ </div>
+</section>

@@ -1,10 +1,10 @@
-# 服务器部署：私有测试阶段
+# 服务器部署：HTTPS 单账号内测
 
-当前基线为 v0.1 Beta，仍是单用户应用。本部署只通过 SSH 隧道访问，不是多用户公网发布版。备案期间不开放网站公网端口；后续完成登录、用户数据隔离、额度控制和 HTTPS 后，再启用正式域名。
+当前仍是单用户应用。正式站点已通过 Nginx HTTPS + HTTP Basic Auth 提供内测访问，HTTP 跳转 HTTPS；也可继续使用 SSH 隧道。反向代理保护整个工作台及 API，但不提供用户数据隔离，不能作为多人注册产品。
 
 ## 目录与边界
 
-- `/opt/storm-studio/releases/v0.1.0b1-server2`：应用代码和部署配置。
+- `/opt/storm-studio/releases/v0.1.0b1`：应用代码和部署配置。
 - `/opt/storm-studio/config/runtime.env`：模型与存储配置，root 读取，权限 600；不进入 Git 或镜像。
 - `/opt/storm-studio/data`：此服务器独立的数据与模型目录；容器用户 10001。
 - `/opt/storm-studio/backups`：数据库及其引用图片的备份；不包含密钥、权重。
@@ -49,8 +49,8 @@ docker compose -f deploy/compose.yaml --profile ops run --rm --no-deps backup
 - 注册、密码哈希、登录会话与登出，注册邀请或审核方式。
 - 图片、任务、候选、批量样张、导出、删除、评价等接口全部按用户隔离，不能仅隐藏前端列表。
 - 按用户分配生成额度，提交时原子扣留额度，处理失败与结果未知，不开放无限免费生成。
-- 正式域名白名单、可信反向代理、Secure Cookie、上传与登录限速。
-- 备案完成后配置域名解析、HTTPS、备案信息展示，进行跨账号越权和收费幂等回归。
+- 已有域名白名单、HTTPS 同源检查及 Secure Cookie；多用户阶段仍需上传与登录限速。
+- 当前已完成域名、HTTPS、备案号展示；多用户阶段仍需跨账号越权和收费幂等回归。
 
 这些是下一阶段改造项，当前部署不宣称已经支持多人注册。
 
@@ -71,3 +71,18 @@ docker build --network host \
 ## OSS 适配版本
 
 `server2` 增加私有 OSS 存储支持，2026-09-21 已验证专用 RAM 凭据的实际读写并启用 `STUDIO_ASSET_BACKEND=oss`，详见 [OSS 存储说明](OSS_STORAGE.md)。三条 Fixture 路线、PNG 下载和 ZIP 导出通过，未调用收费模型。旧图片不会自动迁移。备份容器也需要存储配置，以便打包云端图片。
+
+
+## HTTPS 配置与验收
+
+通用配置见 [Nginx 模板](../deploy/nginx.conf.example)。将 `studio.example.com` 替换为自己的域名，并对应调整 `src/studio/web/app.py` 的域名白名单、HTTPS 同源校验和 Secure Cookie 条件；官方站点域名已在应用中配置，不能通过信任任意 Origin 绕过校验。
+
+1. 配置并启用域名 A 记录，放行 TCP 80/443。应用端口 18765 保持回环绑定。
+2. 安装 Nginx、Certbot、apache2-utils。先配置 HTTP 验证目录 `/.well-known/acme-challenge/`，用 Certbot webroot 模式签发证书，再启用引用正式证书的 HTTPS 配置。
+3. 运行 `sudo htpasswd -cB /etc/nginx/studio.htpasswd studio`，交互设置密码；密码文件只允许 root 和 Nginx 工作进程读取。不要提交密码或哈希文件。
+4. 执行 `nginx -t` 后重新加载。启用 Certbot 续期定时器，在续期部署钩子中运行 `nginx -t && systemctl reload nginx`。
+5. 用 `certbot renew --dry-run --no-random-sleep-on-renew` 验证自动续期。
+
+2026-09-30 正式站点验证通过：HTTP 301 跳转、可信 HTTPS 证书、匿名 401、正确账号访问首页与 API 成功、Secure Cookie、同源表单校验、备案号及工信部链接、续期演练。未调用付费模型。
+
+源码仓库只保存通用配置模板，不包含真实服务器 IP、运行时环境、账号密码、证书私钥、OSS 私有配置或用户图片。官网 URL 和 README 首页截图经用户授权公开。

@@ -31,3 +31,10 @@ runtime.env
 backups/
 *.tar.gz
 *.partial
+
+# HTTPS credentials and certificate state
+public-login.txt
+*.htpasswd
+.htpasswd
+letsencrypt/
+._*

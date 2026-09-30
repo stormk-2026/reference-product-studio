@@ -35,6 +35,7 @@ from studio.repositories.db import (
     recipes,
 )
 from studio.services.batch import preview_remaining, submit_remaining
+from studio.services.content_batch import preview_series, series_status, submit_series
 from studio.services.workflow import Workflow
 from studio.storage.backend import StorageError
 from studio.storage.images import MAX_BYTES
@@ -63,7 +64,13 @@ def create_app(root=None):
     async def local_security(request: WebRequest, call_next):
         if request.method not in {"GET", "HEAD", "OPTIONS"}:
             origin = request.headers.get("origin", "")
-            if origin != str(request.base_url).rstrip("/"):
+            host = request.headers.get("host", "").split(":", 1)[0].lower()
+            expected_origin = (
+                "https://stormstudio.top"
+                if host == "stormstudio.top"
+                else str(request.base_url).rstrip("/")
+            )
+            if origin != expected_origin:
                 return JSONResponse({"detail": "拒绝非同源请求"}, status_code=403)
             cookie, token = (
                 request.cookies.get("studio_csrf", ""),
@@ -90,7 +97,9 @@ def create_app(root=None):
         response.headers["Cache-Control"] = "no-store"
         return response
 
-    app.add_middleware(TrustedHostMiddleware, allowed_hosts=["localhost", "127.0.0.1", "[::1]"])
+    app.add_middleware(
+        TrustedHostMiddleware, allowed_hosts=["localhost", "127.0.0.1", "[::1]", "stormstudio.top"]
+    )
 
     @app.exception_handler(ValueError)
     async def bad_input(request, exc):
@@ -112,7 +121,13 @@ def create_app(root=None):
     def session(request: WebRequest):
         token = request.cookies.get("studio_csrf") or secrets.token_urlsafe(32)
         response = JSONResponse({"csrf": token, "copy": COPY, "recipe_fields": RECIPE_FIELDS})
-        response.set_cookie("studio_csrf", token, httponly=True, samesite="strict")
+        response.set_cookie(
+            "studio_csrf",
+            token,
+            httponly=True,
+            samesite="strict",
+            secure=request.headers.get("host", "").split(":", 1)[0].lower() == "stormstudio.top",
+        )
         return response
 
     @app.get("/api/state")
@@ -159,6 +174,46 @@ def create_app(root=None):
     def batch_submit(candidate_id: str, request: WebRequest):
         return submit_remaining(
             workflow, candidate_id, request.headers.get("x-external-confirmation", "")
+        )
+
+    @app.post("/api/content/series/{candidate_id}/preview")
+    def content_series_preview(candidate_id: str):
+        return preview_series(workflow, candidate_id)
+
+    @app.post("/api/content/series/{candidate_id}/submit")
+    def content_series_submit(candidate_id: str, request: WebRequest):
+        return submit_series(
+            workflow, candidate_id, request.headers.get("x-external-confirmation", "")
+        )
+
+    @app.get("/api/content/series/{candidate_id}")
+    def content_series_status(candidate_id: str):
+        return series_status(workflow, candidate_id)
+
+    @app.get("/api/content/series/{candidate_id}/export")
+    def content_series_export(candidate_id: str):
+        status = series_status(workflow, candidate_id)
+        if not status["complete"]:
+            raise HTTPException(409, "套图尚未全部完成")
+        first = workflow.get(candidates, candidate_id)
+        deck = first["data"]["deck"]
+        stream = io.BytesIO()
+        with zipfile.ZipFile(stream, "w", zipfile.ZIP_DEFLATED) as archive:
+            for index, aid in enumerate(
+                [status["first_asset_id"]] + [t["asset_id"] for t in status["tasks"]]
+            ):
+                archive.writestr(
+                    f"page-{index + 1:02d}.png",
+                    workflow.storage.read_asset(workflow.get(assets, aid)),
+                )
+            archive.writestr("发布正文.txt", deck["post_title"] + "\n\n" + deck["post_body"])
+            archive.writestr(
+                "核对说明.txt", "模型生成视觉背景，原始商品或截图及文字由程序叠放；发布前人工核对。"
+            )
+        return Response(
+            stream.getvalue(),
+            media_type="application/zip",
+            headers={"Content-Disposition": f'attachment; filename="CONTENT-{candidate_id}.zip"'},
         )
 
     @app.post("/api/candidates/{candidate_id}/cutout")
@@ -225,7 +280,10 @@ def create_app(root=None):
         candidate = detail["candidate"]
         fixture = detail["job"]["payload"]["fixture"]
         local = detail["job"]["payload"]["request"]["mode"] == "CUTOUT"
-        prefix = "LOCAL" if local else "FIXTURE" if fixture else "MODEL"
+        content_layout = detail["job"]["payload"]["request"]["mode"] == "CONTENT_RENDER"
+        prefix = (
+            "CONTENT" if content_layout else "LOCAL" if local else "FIXTURE" if fixture else "MODEL"
+        )
         notice = (
             "本地自动抠图，无外发；需核查分割边缘。"
             if local
@@ -233,6 +291,8 @@ def create_app(root=None):
             if fixture
             else "真实模型输出，需人工核验；费用以供应商账单为准。"
         )
+        if content_layout:
+            notice = "本地宣传排版；文案需人工核对。" + (FIXTURE_WARNING if fixture else "")
         manifest = {"notice": notice, "result": detail, "evaluations": []}
         if candidate:
             manifest["evaluations"] = [
@@ -243,7 +303,18 @@ def create_app(root=None):
             archive.writestr(
                 f"{prefix}-manifest.json", json.dumps(manifest, ensure_ascii=False, indent=2)
             )
-            if candidate:
+            if candidate and content_layout:
+                for index, aid in enumerate(candidate["data"]["pages"]):
+                    archive.writestr(
+                        f"page-{index + 1:02d}.png",
+                        workflow.storage.read_asset(workflow.get(assets, aid)),
+                    )
+                deck = candidate["data"]["deck"]
+                archive.writestr("发布正文.txt", deck["post_title"] + "\n\n" + deck["post_body"])
+                archive.writestr(
+                    "核对说明.txt", deck["review_notes"] + "\n" + candidate["data"]["warning"]
+                )
+            elif candidate:
                 item = workflow.get(assets, candidate["asset_id"])
                 archive.writestr(f"{prefix}-result.png", workflow.storage.read_asset(item))
                 archive.writestr("READ-ME.txt", notice + "\n" + candidate["data"]["warning"])

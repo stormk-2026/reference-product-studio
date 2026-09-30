@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="zh-CN">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Storm Studio.</title><link rel="stylesheet" href="/static/style.css?v=canvas-studio-24"><link rel="stylesheet" href="/static/glass.css?v=canvas-studio-24"><script src="/static/app.js?v=canvas-studio-24" defer></script></head>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Storm Studio.</title><link rel="stylesheet" href="/static/style.css?v=content-studio-26"><link rel="stylesheet" href="/static/glass.css?v=content-studio-26"><script src="/static/app.js?v=content-studio-26" defer></script><link rel="stylesheet" href="/static/content.css?v=content-studio-26"><script src="/static/content.js?v=content-studio-26" defer></script></head>
 <body data-tool="home">
 <a href="#workspace" class="skip">跳到工作区</a>
 <header class="glass-header"><a class="brand" href="/">Storm Studio.</a><h1 id="page-title">首页</h1><div class="header-tools"><button id="new-task" type="button" class="secondary" hidden>新建任务</button><button id="tool-home" type="button" class="secondary">返回首页</button><button id="open-history" class="secondary" type="button">历史作品 ↗</button></div></header>
@@ -8,12 +8,13 @@
 <main>
 <div id="message" role="status" aria-live="polite"></div>
 <section id="tool-homepage" class="tool-homepage">
-<p class="eyebrow">PRODUCT MATERIALS / WORKSPACE</p><h1>今天，想为商品做点什么？</h1><p class="home-lead">两条简单的生产流程，把随手拍的照片变成能用的商品物料。</p>
+<p class="eyebrow">PRODUCT MATERIALS / WORKSPACE</p><h1>今天，想为商品做点什么？</h1><p class="home-lead">从实拍净化、场景创作到宣传图文，让素材变成可以使用的作品。</p>
 <div class="tool-grid">
 <button id="choose-promo" type="button" class="tool-entry"><div class="tool-visual promo-visual" aria-hidden="true"><span class="mini-product">实拍</span><i>→</i><span class="mini-product clean">白底</span><i>→</i><span class="mini-product scene">场景</span></div><span class="tool-index">01 / 商品展示</span><h2>生成宣传图物料</h2><p>随手拍商品，先做纯净白底图。再选喜欢的展示背景，让自己的商品进入新场景。</p><div class="tool-tags"><span>白底展示图</span><span>参考场景混图</span></div><strong>开始制作 <span>↗</span></strong></button>
 <button id="choose-drawing" type="button" class="tool-entry"><div class="tool-visual drawing-visual" aria-hidden="true"><span>正视<br>▤</span><span>侧视<br>▥</span><span>俯视<br>▱</span></div><span class="tool-index">02 / 说明书配图 · BETA</span><h2>生成说明书工业草图</h2><p>提供同一商品的三视图或多角度实拍，生成纯净三视图线稿，用于说明书插图与设计沟通。</p><div class="tool-tags"><span>工业外观线稿</span><span>核对后补充标注</span></div><strong>开始制作 <span>↗</span></strong></button>
-</div><p class="home-footnote">素材私有保存 · 每次生成前确认 · 工业草图不作为生产加工图</p>
+<button id="choose-content" type="button" class="tool-entry"><div class="tool-visual content-visual" aria-hidden="true"><span>截图 / 商品</span><i>＋</i><span>真实卖点</span><i>→</i><span>图文套装</span></div><span class="tool-index">03 / 宣传图文</span><h2>App 展示 / 商品种草</h2><p>两套内容方案：用真实截图展示 App，用商品图讲清卖点。Kimi 起草与润色文案，Seedream 生成视觉背景。</p><div class="tool-tags"><span>多页宣传图</span><span>可复制发布正文</span></div><strong>开始制作 <span>↗</span></strong></button></div><p class="home-footnote">素材私有保存 · 每次生成前确认 · 工业草图不作为生产加工图</p>
 </section>
+{% include "content.html" %}
 <button id="asset-backdrop" class="asset-backdrop" type="button" aria-label="关闭图片资产" hidden></button>
 <div class="workspace" id="workspace">
 
@@ -40,5 +41,5 @@
 <dialog id="result-details" aria-labelledby="result-details-title"><div class="picker-heading"><h2 id="result-details-title">作品详情</h2><button id="close-result-details" type="button" class="secondary">关闭详情</button></div><section id="result-panel" class="results"><div id="empty-result" hidden></div><div id="result"></div></section></dialog>
 <!-- Compatibility controls for existing records; not exposed as tools. -->
 <div hidden><nav class="tabs"></nav><select id="mode"><option value="A_white">白底实物图</option></select><select id="execution"><option value="real">真实模型</option></select><input type="checkbox" id="change-background" checked><input type="checkbox" id="change-subject"><div id="subject-control"><select id="subject-image"></select></div><select id="reference"></select><select id="back"></select><select id="analysis"></select><select id="recipe"></select><p id="recipe-status"></p><select id="strategy"><option value="reference_recipe">参考配方</option></select><input id="background" value="#ffffff"><input type="checkbox" id="show-tests"><button id="demo" type="button"></button><button id="pattern-entry" type="button"></button><div id="pattern-warning"></div><div id="mask-control"><select id="mask"></select></div><fieldset id="composite-options"><input id="scale" value="0.7"><input id="pos-x" value="0.5"><input id="pos-y" value="0.5"><input id="feather" value="0"><input id="shadow" type="checkbox" checked></fieldset><select id="compare-one"></select><select id="compare-two"></select><button id="compare" type="button"></button><div id="comparison"></div></div>
-<footer>Storm Studio. · 单用户测试版<span>说明书草图需核对结构后补充标注，不作为生产加工依据</span></footer>
+<footer><span>Storm Studio.</span><a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener noreferrer">浙ICP备2026082439号-1</a><span>说明书草图需核对结构后补充标注，不作为生产加工依据</span></footer>
 <dialog id="image-picker" aria-labelledby="picker-title"><div class="picker-heading"><h2 id="picker-title">添加图片</h2><button id="picker-close" type="button" class="secondary">关闭</button></div><p id="picker-limit" class="hint"></p><div class="picker-actions"><button id="picker-local" type="button" class="primary">本地上传</button><button id="picker-library" type="button" class="secondary">作品库选择</button></div><input id="picker-file" type="file" accept="image/png,image/jpeg,image/webp" multiple hidden><p id="picker-status" role="status" aria-live="polite"></p><div id="picker-selected" class="picker-grid"></div><div id="picker-library-grid" class="picker-grid" hidden></div></dialog></main></body></html>

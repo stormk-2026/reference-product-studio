@@ -28,6 +28,11 @@ def run_once(workflow):
     request = Request.model_validate(job["payload"]["request"])
     started = time.monotonic()
     try:
+        if request.mode.startswith("CONTENT_"):
+            from studio.services.content import run_content
+
+            run_content(workflow, job)
+            return True
         if request.mode == "CUTOUT":
             from studio.services.cutout import run_cutout
 
