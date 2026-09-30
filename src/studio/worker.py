@@ -9,6 +9,7 @@ from studio.domain.models import FIXTURE_WARNING, PATTERN_WARNING, Request
 from studio.domain.rules import back_label
 from studio.providers.domestic import ProviderError
 from studio.repositories.db import analyses, candidates, engine_for, identifier, jobs, now, recipes
+from studio.repositories.store import QuotaError
 from studio.services.composite import composite
 from studio.services.real_jobs import run_real
 from studio.services.workflow import Workflow
@@ -29,6 +30,12 @@ def run_once(workflow):
     request = Request.model_validate(job["payload"]["request"])
     started = time.monotonic()
     try:
+        reserve = getattr(workflow, "reserve_public_call", None)
+        if reserve and request.execution == "real":
+            if not reserve(job["id"]):
+                raise ProviderError(
+                    "此任务已有模型调用记录；未重复调用，请人工核查", state="outcome_unknown"
+                )
         if request.mode.startswith("CONTENT_"):
             from studio.services.content import run_content
 
@@ -122,7 +129,9 @@ def run_once(workflow):
     except Exception as exc:
         # Do not log raw provider responses, credentials or signed URLs.
         state = (
-            exc.state
+            "failed"
+            if isinstance(exc, QuotaError)
+            else exc.state
             if isinstance(exc, ProviderError)
             else (
                 "outcome_unknown"
@@ -132,7 +141,7 @@ def run_once(workflow):
         )
         message = (
             str(exc)
-            if isinstance(exc, ProviderError)
+            if isinstance(exc, (ProviderError, QuotaError))
             or (request.execution == "fixture" and isinstance(exc, ValueError))
             else f"{type(exc).__name__}；结果未确认，请查看本地任务并人工核查"
         )

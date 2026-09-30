@@ -37,9 +37,10 @@ from studio.repositories.db import (
     recipes,
 )
 from studio.repositories.store import QuotaError
-from studio.services.accounts import Accounts, AuthError
+from studio.services.accounts import Accounts, AuthError, RateLimitError
 from studio.services.batch import preview_remaining, submit_remaining
 from studio.services.content_batch import preview_series, series_status, submit_series
+from studio.services.email_registration import EmailRegistration, MailUnavailable, SMTPMailer
 from studio.services.tenants import Tenants, WorkflowProxy, current_workflow
 from studio.services.workflow import Workflow
 from studio.storage.backend import StorageError
@@ -57,11 +58,21 @@ class FavoriteBody(StrictModel):
 
 
 class Credentials(StrictModel):
-    username: str = Field(min_length=3, max_length=32)
+    username: str = Field(min_length=3, max_length=254)
     password: str = Field(min_length=10, max_length=128)
 
 
-def create_app(root=None, *, auth_enabled=None):
+class EmailBody(StrictModel):
+    email: str = Field(min_length=3, max_length=254)
+
+
+class EmailSignup(EmailBody):
+    password: str = Field(min_length=10, max_length=128)
+    challenge_id: str = Field(pattern=r"^[A-Za-z0-9_-]{32}$")
+    code: str = Field(pattern=r"^[0-9]{6}$")
+
+
+def create_app(root=None, *, auth_enabled=None, mailer=None, registration_enabled=None):
     root = root or data_dir()
     auth_enabled = (
         (os.environ.get("STUDIO_AUTH_ENABLED") == "1") if auth_enabled is None else auth_enabled
@@ -72,6 +83,27 @@ def create_app(root=None, *, auth_enabled=None):
     app = FastAPI(title=COPY["title"], docs_url=None, redoc_url=None, openapi_url=None)
     app.state.workflow = workflow
     app.state.accounts = accounts
+    registration = (
+        EmailRegistration(
+            accounts,
+            mailer or SMTPMailer(),
+            os.environ.get("STUDIO_REGISTRATION_ENABLED") == "1"
+            if registration_enabled is None
+            else registration_enabled,
+        )
+        if accounts
+        else None
+    )
+    app.state.registration = registration
+
+    def request_peer(request):
+        peer = request.client.host if request.client else "unknown"
+        return (
+            request.headers.get("x-real-ip", peer)
+            if os.environ.get("STUDIO_TRUST_PROXY") == "1"
+            else peer
+        )
+
     app.state.tenants = tenants
     web = Path(__file__).parent
     app.mount("/static", StaticFiles(directory=web / "static"), name="static")
@@ -101,7 +133,9 @@ def create_app(root=None, *, auth_enabled=None):
             chunks = []
             async for chunk in request.stream():
                 total += len(chunk)
-                if total > MAX_BYTES + 65536:
+                if total > (
+                    8192 if request.url.path.startswith("/api/auth/") else MAX_BYTES + 65536
+                ):
                     return JSONResponse({"detail": "请求超过大小上限"}, status_code=413)
                 chunks.append(chunk)
             request._body = b"".join(chunks)
@@ -116,6 +150,8 @@ def create_app(root=None, *, auth_enabled=None):
                 "/api/session",
                 "/api/auth/login",
                 "/api/auth/register",
+                "/api/auth/send-code",
+                "/api/auth/options",
             } or request.url.path.startswith("/static/")
             if not public and not user:
                 return (
@@ -126,25 +162,28 @@ def create_app(root=None, *, auth_enabled=None):
             if user:
                 selected = await run_in_threadpool(tenants.workflow, user)
                 context_token = current_workflow.set(selected)
-            if request.method == "POST" and request.url.path in {
-                "/api/auth/login",
-                "/api/auth/register",
-            }:
-                peer = request.client.host if request.client else "unknown"
-                if os.environ.get("STUDIO_TRUST_PROXY") == "1":
-                    peer = request.headers.get("x-real-ip", peer)
-                scope = "register" if request.url.path.endswith("register") else "login"
-                try:
-                    await run_in_threadpool(
-                        accounts.throttle,
-                        scope + ":" + peer,
-                        3 if scope == "register" else 15,
-                        86400 if scope == "register" else 900,
-                    )
-                except AuthError as exc:
-                    if context_token is not None:
-                        current_workflow.reset(context_token)
-                    return JSONResponse({"detail": str(exc)}, status_code=429)
+            try:
+                if request.method == "POST" and request.url.path.startswith("/api/auth/"):
+                    peer = request_peer(request)
+                    if request.url.path == "/api/auth/login":
+                        await run_in_threadpool(
+                            accounts.throttle_many,
+                            [("login:" + peer, 15, 900), ("login-global", 100, 900)],
+                        )
+                if user and request.method == "POST":
+                    path = request.url.path
+                    if path == "/api/jobs" or path.endswith(("/submit", "/cutout")):
+                        await run_in_threadpool(
+                            accounts.throttle, "generation:" + user["id"], 4, 60
+                        )
+                    elif path == "/api/assets":
+                        await run_in_threadpool(accounts.throttle, "upload:" + user["id"], 15, 60)
+            except RateLimitError as exc:
+                if context_token is not None:
+                    current_workflow.reset(context_token)
+                return JSONResponse(
+                    {"detail": str(exc)}, status_code=429, headers={"Retry-After": "60"}
+                )
         try:
             response = await call_next(request)
         finally:
@@ -165,6 +204,14 @@ def create_app(root=None, *, auth_enabled=None):
     @app.exception_handler(QuotaError)
     async def quota_error(request, exc):
         return JSONResponse({"detail": str(exc)}, status_code=403)
+
+    @app.exception_handler(RateLimitError)
+    async def rate_limit_error(request, exc):
+        return JSONResponse({"detail": str(exc)}, status_code=429, headers={"Retry-After": "60"})
+
+    @app.exception_handler(MailUnavailable)
+    async def mail_unavailable(request, exc):
+        return JSONResponse({"detail": str(exc)}, status_code=503)
 
     @app.exception_handler(AuthError)
     async def auth_error(request, exc):
@@ -198,11 +245,33 @@ def create_app(root=None, *, auth_enabled=None):
         accounts.logout(request.cookies.get("studio_session", ""))
         return response
 
-    @app.post("/api/auth/register")
-    def register(body: Credentials, request: WebRequest):
-        if not accounts:
+    @app.get("/api/auth/options")
+    def auth_options():
+        return {
+            "email_registration": bool(registration and registration.enabled),
+            "message": "验证邮箱后可注册"
+            if registration and registration.enabled
+            else "邮箱注册暂未开放；已有主账户可正常登录",
+        }
+
+    @app.post("/api/auth/send-code")
+    def send_code(body: EmailBody, request: WebRequest):
+        if not registration:
             raise HTTPException(404)
-        user = accounts.create(body.username, body.password)
+        challenge = registration.send_code(body.email, request_peer(request))
+        return {
+            "challenge_id": challenge,
+            "retry_after": 60,
+            "message": "如果该邮箱可注册，验证码已发送；请检查收件箱或垃圾邮件。",
+        }
+
+    @app.post("/api/auth/register")
+    def register(body: EmailSignup, request: WebRequest):
+        if not registration:
+            raise HTTPException(404)
+        user = registration.register(
+            body.email, body.password, body.challenge_id, body.code, request_peer(request)
+        )
         tenants.workflow(user)
         return logged_in(user, request)
 

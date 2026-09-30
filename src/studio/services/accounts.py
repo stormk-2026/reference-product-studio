@@ -16,6 +16,10 @@ class AuthError(ValueError):
     pass
 
 
+class RateLimitError(AuthError):
+    pass
+
+
 def password_hash(password):
     salt = secrets.token_hex(16)
     with _password_slots:
@@ -57,6 +61,9 @@ class Accounts:
                 CREATE TABLE IF NOT EXISTS attempts (scope TEXT, occurred_at REAL);
                 CREATE INDEX IF NOT EXISTS attempts_scope ON attempts(scope, occurred_at);
             """)
+            from studio.services.email_registration import initialize_schema
+
+            initialize_schema(db)
         self.path.chmod(0o600)
         self.dummy_hash = password_hash(secrets.token_urlsafe(24))
 
@@ -72,16 +79,41 @@ class Accounts:
             db.close()
 
     def throttle(self, scope, limit, period):
+        self.throttle_many([(scope, limit, period)])
+
+    def throttle_many(self, limits):
         with self.connect() as db:
             db.execute("BEGIN IMMEDIATE")
             db.execute("DELETE FROM attempts WHERE occurred_at < ?", (time.time() - 86400,))
+            for scope, limit, period in limits:
+                count = db.execute(
+                    "SELECT count(*) FROM attempts WHERE scope=? AND occurred_at>?",
+                    (scope, time.time() - period),
+                ).fetchone()[0]
+                if count >= limit:
+                    raise RateLimitError("操作过于频繁，请稍后再试")
+            db.executemany(
+                "INSERT INTO attempts VALUES (?,?)",
+                [(scope, time.time()) for scope, _, _ in limits],
+            )
+
+    def reserve_provider_call(self, user_id, job_id, limit):
+        from studio.repositories.store import QuotaError
+
+        day = int((time.time() + 8 * 3600) // 86400)
+        with self.connect() as db:
+            db.execute("BEGIN IMMEDIATE")
+            if db.execute("SELECT job_id FROM provider_calls WHERE job_id=?", (job_id,)).fetchone():
+                return False
             count = db.execute(
-                "SELECT count(*) FROM attempts WHERE scope=? AND occurred_at>?",
-                (scope, time.time() - period),
+                "SELECT count(*) FROM provider_calls WHERE day=?", (day,)
             ).fetchone()[0]
             if count >= limit:
-                raise AuthError("操作过于频繁，请稍后再试")
-            db.execute("INSERT INTO attempts VALUES (?,?)", (scope, time.time()))
+                raise QuotaError("今日全站公共体验调用额度已用完，请明天再试；本次未调用模型")
+            db.execute(
+                "INSERT INTO provider_calls VALUES (?,?,?,?)", (job_id, user_id, day, time.time())
+            )
+        return True
 
     def users(self):
         with self.connect() as db:
@@ -99,7 +131,7 @@ class Accounts:
         try:
             with self.connect() as db:
                 db.execute(
-                    "INSERT INTO users VALUES (?,?,?,?,?)",
+                    "INSERT INTO users(id,username,password_hash,owner,created_at) VALUES (?,?,?,?,?)",
                     (user["id"], username, encoded, user["owner"], time.time()),
                 )
         except sqlite3.IntegrityError:
@@ -112,7 +144,7 @@ class Accounts:
                 "SELECT * FROM users WHERE username=?", (username.strip().lower(),)
             ).fetchone()
         valid = password_matches(password, row["password_hash"] if row else self.dummy_hash)
-        if not row or not valid:
+        if not row or not valid or (not row["owner"] and not row["email_verified_at"]):
             raise AuthError("用户名或密码不正确")
         return {k: row[k] for k in ("id", "username", "owner")}
 
@@ -132,7 +164,8 @@ class Accounts:
         with self.connect() as db:
             row = db.execute(
                 """SELECT u.id,u.username,u.owner FROM users u JOIN sessions s
-                                ON u.id=s.user_id WHERE s.token_hash=? AND s.expires_at>?""",
+                                ON u.id=s.user_id WHERE s.token_hash=? AND s.expires_at>?
+                                AND (u.owner=1 OR u.email_verified_at IS NOT NULL)""",
                 (hashlib.sha256(token.encode()).hexdigest(), time.time()),
             ).fetchone()
             return dict(row) if row else None
@@ -145,7 +178,14 @@ class Accounts:
             )
 
     def reset_password(self, username, password):
-        username = validate_credentials(username, password)
+        if "@" in username:
+            from studio.services.email_registration import normalize_email
+
+            username = normalize_email(username)
+            if not 10 <= len(password) <= 128:
+                raise AuthError("密码须为 10–128 个字符")
+        else:
+            username = validate_credentials(username, password)
         encoded = password_hash(password)
         with self.connect() as db:
             user = db.execute("SELECT id FROM users WHERE username=?", (username,)).fetchone()

@@ -1,6 +1,7 @@
 """Each account gets a separate workflow DB, local asset directory and approval signer."""
 
 import fcntl
+import os
 from collections import OrderedDict
 from contextvars import ContextVar
 from threading import RLock
@@ -32,6 +33,13 @@ class Tenants:
                     metadata.create_all(engine)
                 workflow = Workflow(engine, root)
                 workflow.store.quota_limit = None if user["owner"] else 3
+                if not user["owner"]:
+
+                    def reserve(job_id, user_id=user["id"]):
+                        limit = max(0, int(os.environ.get("STUDIO_PUBLIC_DAILY_CALL_LIMIT", "30")))
+                        return self.accounts.reserve_provider_call(user_id, job_id, limit)
+
+                    workflow.reserve_public_call = reserve
                 self.cache[user["id"]] = workflow
                 if len(self.cache) > 128:
                     _, old = self.cache.popitem(last=False)

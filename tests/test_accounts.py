@@ -16,21 +16,43 @@ PASSWORD = "offline-test-password-only"
 BASE = "https://stormstudio.top"
 
 
+class FakeMailer:
+    ready = True
+
+    def __init__(self):
+        self.codes = {}
+
+    def send(self, email, code):
+        self.codes[email] = code
+
+
 def sign_in(app, username, register=True):
     client = TestClient(app, base_url=BASE)
     csrf = client.get("/api/session").json()["csrf"]
     client.headers.update({"origin": BASE, "x-csrf-token": csrf})
-    response = client.post(
-        "/api/auth/" + ("register" if register else "login"),
-        json={"username": username, "password": PASSWORD},
-    )
+    if register:
+        email = username + "@example.org"
+        challenge = client.post("/api/auth/send-code", json={"email": email}).json()["challenge_id"]
+        response = client.post(
+            "/api/auth/register",
+            json={
+                "email": email,
+                "password": PASSWORD,
+                "challenge_id": challenge,
+                "code": app.state.registration.mailer.codes[email],
+            },
+        )
+    else:
+        response = client.post("/api/auth/login", json={"username": username, "password": PASSWORD})
     assert response.status_code == 200, response.text
     return client
 
 
 @pytest.fixture
 def app(tmp_path):
-    application = create_app(tmp_path, auth_enabled=True)
+    application = create_app(
+        tmp_path, auth_enabled=True, mailer=FakeMailer(), registration_enabled=True
+    )
     application.state.accounts.create("studio", PASSWORD, owner=True)
     return application
 
@@ -70,7 +92,7 @@ def test_auth_protects_all_data_and_real_upload(app):
         "studio_session"
     )
     token = alice.cookies.get("studio_session")
-    assert app.state.accounts.resolve(token)["username"] == "alice"
+    assert app.state.accounts.resolve(token)["username"] == "alice@example.org"
     alice.post("/api/auth/logout")
     assert app.state.accounts.resolve(token) is None
     assert alice.get("/api/state").status_code == 401
@@ -92,8 +114,18 @@ def test_session_security_and_registration_validation(app):
         json={"username": "alice", "password": PASSWORD, "owner": True},
     )
     assert response.status_code == 422
+    sent = client.post(
+        "/api/auth/send-code", headers=headers, json={"email": "alice@example.org"}
+    ).json()
     response = client.post(
-        "/api/auth/register", headers=headers, json={"username": "alice", "password": PASSWORD}
+        "/api/auth/register",
+        headers=headers,
+        json={
+            "email": "alice@example.org",
+            "password": PASSWORD,
+            "challenge_id": sent["challenge_id"],
+            "code": app.state.registration.mailer.codes["alice@example.org"],
+        },
     )
     cookie = response.headers["set-cookie"].lower()
     assert "httponly" in cookie and "secure" in cookie and "samesite=lax" in cookie

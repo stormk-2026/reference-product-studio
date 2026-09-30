@@ -31,3 +31,32 @@ docker compose -f deploy/compose.yaml exec web python -m studio.manage_accounts 
 根目录 `accounts.db` 保存账号、密码哈希和会话；主账户仍用 `studio.db`，普通账号位于 `users/<随机ID>/studio.db`。数据库 ID 只由服务端生成。OSS 对象不可匿名访问，通过账号空间解析资产 ID。
 
 `python scripts/backup.py --output /backups` 同时备份所有账号和资产，备份会话被清空，恢复后必须重新登录。账号密码哈希属于敏感运行数据，备份仅保存在私有目录，权限 600。未来修改 workflow schema 时须对根数据库及所有 users 子目录执行迁移，不能只升级根数据库。
+
+## 邮箱验证与多层限流（当前版本）
+
+新注册只接受邮箱 + 6 位验证码 + 密码，不再接受任意用户名。主账户 `studio` 保留原登录。旧的未验证普通账号不能登录或复用会话；现有主账户和作品保留。
+
+邮件配置仅在服务器私有 `runtime.env` 中填写：
+
+```dotenv
+STUDIO_REGISTRATION_ENABLED=0
+STUDIO_SMTP_HOST=
+STUDIO_SMTP_PORT=465
+STUDIO_SMTP_USERNAME=
+STUDIO_SMTP_PASSWORD=
+STUDIO_SMTP_FROM=
+STUDIO_PUBLIC_DAILY_CALL_LIMIT=30
+```
+
+支持 SSL 465 或 STARTTLS 587，校验 TLS 证书；拒绝明文端口。阿里云邮件推送可使用 `smtpdm.aliyun.com:465`；发信域名/发信地址需先在服务商完成验证，使用 SMTP 凭据，不能使用 OSS 的 RAM AccessKey。参考[阿里云官方 SMTP 文档](https://help.aliyun.com/zh/direct-mail/user-guide/send-emails-using-smtp)。不在日志、接口或测试页面显示验证码，不提供生产调试验证码旁路。配置后先验证自有收件邮箱实际送达，再打开注册开关、重建 Web 和 Worker。
+
+- 验证码：10 分钟有效、最多尝试 5 次、使用后失效；重发使旧码失效。密码与验证码均哈希保存。注册和消费验证码在同一事务内完成。
+- 发信：同邮箱 60 秒一次、每天 3 次；同 IP 每小时 3 次/每天 10 次；全站每天最多 50 次。发送未确认不会自动重试。
+- 注册：同 IP 每天最多 3 个成功账号，邮箱唯一，Gmail 常见别名归一化。没有配置发信或注册开关关闭时返回 503，不降级为用户名注册。
+- 登录：IP 每 15 分钟 15 次、用户名每 15 分钟 30 次；全站每 15 分钟 100 次。
+- 生成提交：每账号每分钟 4 次；上传每分钟 15 次。超限返回 429。
+- 全站公共模型调用：默认北京时间每天最多 30 次，含 Kimi 文案和 Seedream；在 Worker 外发前通过中央数据库原子预占，跨账号并发不能超过。拒绝后不外发并返还个人图片额度。供应商失败仍保守计入公共调用尝试总量，主账户除外。
+
+Nginx 模板同时限每 IP 请求速率、身份接口速率、站点总速率及连接数量，请使用站点专用 zone，勿影响其他站点；应用端口继续只绑定回环。参考 [Nginx 官方限流说明](https://nginx.org/en/docs/http/ngx_http_limit_req_module.html)。这些措施限制应用滥用和费用，不等于防住大流量 DDoS，也不能保证一个自然人只有一个邮箱。
+
+备份中清除一次性验证码表，保留账号验证状态和公共调用记账，恢复后需要重新获取验证码。

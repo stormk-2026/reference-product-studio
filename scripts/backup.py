@@ -42,6 +42,10 @@ def backup(root: Path, output: Path, *, storage=None) -> Path:
                     # Password hashes must survive disaster recovery; live sessions must not.
                     db.execute("DELETE FROM sessions")
                     db.execute("DELETE FROM attempts")
+                    if db.execute(
+                        "SELECT name FROM sqlite_master WHERE name='email_codes'"
+                    ).fetchone():
+                        db.execute("DELETE FROM email_codes")
                     for (user_id,) in db.execute("SELECT id FROM users WHERE owner=0"):
                         import re
 
