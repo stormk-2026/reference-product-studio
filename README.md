@@ -1,5 +1,7 @@
 # Storm Studio.
 
+**简体中文** | [English](README.en.md)
+
 **v0.1 Beta** · 商品图片与宣传图文生产工具。版本变更见 [CHANGELOG.md](CHANGELOG.md)。
 
 支持账号隔离的电商图片工作台，提供 **宣传图物料、说明书工业草图、App 展示／商品种草** 三个工具。支持 Kimi 文案起草与润色、Seedream 视觉生成和本地 U²-Net 抠图。
@@ -88,7 +90,7 @@ node --test tests/frontend/*.cjs
 
 项目维护与已验证行为约束见 [HARNESS.md](HARNESS.md)。
 
-服务器部署见 [部署说明](docs/SERVER_DEPLOYMENT.md)。正式域名已启用 HTTPS 和反向代理单账号保护，应用端口仍仅绑定本机。多人注册、跨用户数据隔离与用户额度尚未实现，不能直接作为免登录公共服务。
+服务器部署见 [部署说明](docs/SERVER_DEPLOYMENT.md)。正式域名已启用 HTTPS 和反向代理，应用端口仍仅绑定本机。邮箱验证注册、账号隔离与用户额度已实现，当前配置见[多用户部署](docs/ACCOUNTS.md)；公网访问需保留认证与额度控制。
 
 图片支持本地或私有 OSS 存储，配置及权限说明见 [OSS 接入](docs/OSS_STORAGE.md)。默认本地；切换后旧本地图片仍可读取。
 
