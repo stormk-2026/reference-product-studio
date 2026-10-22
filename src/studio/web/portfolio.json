@@ -1,0 +1,530 @@
+[
+  {
+    "slug": "visual-workbench",
+    "name": "AI 视觉工作台",
+    "en": "STUDIO TOOLS",
+    "category": "tools",
+    "kind": "在线工具",
+    "status": "可体验",
+    "tone": "blue",
+    "tagline": "从随手实拍，到可以使用的物料。",
+    "description": "商品白底净化、参考场景混图、说明书工业草图，以及 App / 商品宣传图文，把常用创作过程串成工具。",
+    "role": "独立构建 · AI 辅助研发",
+    "tags": [
+      "FastAPI",
+      "Kimi / Seedream",
+      "云端部署"
+    ],
+    "images": [
+      [
+        "workbench.png",
+        "工作台 · 三条创作入口"
+      ]
+    ],
+    "video": null,
+    "links": [
+      {
+        "name": "进入工作台",
+        "url": "/studio"
+      },
+      {
+        "name": "查看源码",
+        "url": "https://github.com/stormk-2026/reference-product-studio"
+      }
+    ],
+    "story": "从真实的商品图片处理需求开始，反复简化上传、参考图选择和生成确认。已有素材可以继续创作，多商品先确认首张，再生成其余图片。",
+    "features": [
+      [
+        "商品图生产流程",
+        "实拍净化为白底图，可下载、抠图，或继续参考场景混图。"
+      ],
+      [
+        "说明书草图",
+        "根据主视图与补充角度生成三视图线稿初稿，使用前需对照实物核验。"
+      ],
+      [
+        "完整运行链路",
+        "接入邮箱验证、账号隔离、生成额度、限流与私有素材存储。"
+      ],
+      [
+        "宣传图文",
+        "App 截图与商品图片采用不同方案。Kimi 起草与可选润色，Seedream 生成视觉背景，确认首张后继续整套制作。"
+      ]
+    ],
+    "visual": "browser",
+    "period": "2026 · 持续迭代",
+    "image_width": 1920,
+    "image_height": 860
+  },
+  {
+    "slug": "flow",
+    "name": "流境",
+    "en": "FLOW",
+    "category": "personal",
+    "kind": "个人产品",
+    "status": "上架中",
+    "tone": "sage",
+    "tagline": "让注意力，慢慢回到自己。",
+    "description": "一个留给自己的安静空间。沉浸专注、随手记录心笺，再回看生活中一点一滴的沉淀。",
+    "role": "独立开发 · 产品与全栈实现",
+    "tags": [
+      "Flutter",
+      "专注与记录",
+      "个人产品"
+    ],
+    "images": [
+      [
+        "flow-focus.png",
+        "专注 · 从一个安静的圆点开始"
+      ],
+      [
+        "flow-notes.png",
+        "心笺 · 留住当下的念头"
+      ],
+      [
+        "flow-insights.png",
+        "沉淀 · 回看专注与记录"
+      ]
+    ],
+    "video": "flow-demo.mp4",
+    "links": [],
+    "story": "我想做一个轻一点的专注工具，让开始专注和记下念头，都成为自然的动作。界面尽量留白，用柔和的层次把注意力交还给内容。",
+    "features": [
+      [
+        "安静地开始",
+        "围绕专注构建简洁的交互入口，减少开始之前的操作。"
+      ],
+      [
+        "随时留下心笺",
+        "用文字与图片记录想法，保留当时的感受。"
+      ],
+      [
+        "回看自己的节奏",
+        "将专注时长、心笺记录与回顾集中呈现。"
+      ],
+      [
+        "全栈独立交付",
+        "独立完成需求梳理、UI/UX 还原、Flutter 客户端、Python 后端 API、联调与部署。"
+      ]
+    ],
+    "visual": "phones",
+    "period": "2026.05 — 2026.07",
+    "image_width": 1320,
+    "image_height": 2868
+  },
+  {
+    "slug": "seek",
+    "name": "觅境",
+    "en": "SEEK",
+    "category": "personal",
+    "kind": "个人产品",
+    "status": "上架中",
+    "tone": "mint",
+    "tagline": "记下好地方，下次找得到。",
+    "description": "把偶然发现的好地方，变成自己的地点收藏。照片、找点说明与真实坐标，一起留在地图上。",
+    "role": "个人产品开发",
+    "tags": [
+      "地点收藏",
+      "地图体验",
+      "个人产品"
+    ],
+    "images": [
+      [
+        "seek-intro.png",
+        "觅境 · 记下好地方"
+      ],
+      [
+        "seek-map.png",
+        "我的点位 · 把发现留在地图上"
+      ],
+      [
+        "seek-explore.png",
+        "探索 · 从近处到远方"
+      ]
+    ],
+    "video": null,
+    "links": [],
+    "story": "有些地方值得再去，却容易在忙碌里忘记。觅境把拍照、地点说明和坐标放在一起，让个人发现可以被保存，也能被重新找到。",
+    "features": [
+      [
+        "拍下眼前发现",
+        "用照片与找点说明记录地点，不只留下一个地址。"
+      ],
+      [
+        "记录真实坐标",
+        "在地图上查看点位，切换视野，回到自己的发现。"
+      ],
+      [
+        "自己的地点收藏",
+        "集中保存地点记录，也支持暂存本机草稿。"
+      ]
+    ],
+    "visual": "phones",
+    "period": "",
+    "image_width": 1320,
+    "image_height": 2868
+  },
+  {
+    "slug": "trundertrack",
+    "name": "Trundertrack",
+    "en": "FARCASTER MINI DAPP",
+    "category": "personal",
+    "kind": "个人产品",
+    "status": "项目经历",
+    "tone": "graphite",
+    "tagline": "记录交易习惯，让复盘成为一种日常。",
+    "description": "基于 Farcaster 生态的 Mini DApp，为交易员提供操作习惯记录、数据分析与社交分享。",
+    "role": "独立开发",
+    "tags": [
+      "Farcaster",
+      "Riverpod",
+      "AI 辅助研发"
+    ],
+    "period": "2025.08 — 2026.02",
+    "images": [
+      [
+        "trundertrack-journal.png",
+        "交易日记 · 记录与回顾的入口"
+      ],
+      [
+        "trundertrack-trades.png",
+        "选择交易 · 筛选需要复盘的记录"
+      ],
+      [
+        "trundertrack-strategy.png",
+        "策略与情绪 · 记录交易时的决策背景"
+      ]
+    ],
+    "video": null,
+    "links": [],
+    "story": "基于 Farcaster 生态的 Mini DApp，为交易员提供操作习惯记录、数据分析与社交分享。",
+    "features": [
+      [
+        "从 0 到 1 的 AI 协同开发",
+        "作为 Context Provider 梳理需求与上下文，结合 AI 编程助手完成前后端架构设计，以及 Riverpod 复杂状态管理的代码生成与重构。"
+      ],
+      [
+        "流式交互与长列表",
+        "针对交易动态与 AI 数据分析，优化端侧流式数据渲染和长列表帧率，改善连续阅读与交互体验。"
+      ]
+    ],
+    "visual": "phones",
+    "image_width": 1320,
+    "image_height": 2868
+  },
+  {
+    "slug": "okchat",
+    "name": "OkChat",
+    "en": "COMMUNICATION",
+    "category": "commercial",
+    "kind": "商业项目",
+    "status": "Google Play",
+    "tone": "lavender",
+    "tagline": "即时通信、实时音视频与 Web3，在移动端连接。",
+    "description": "面向海外市场的社交金融（SocialFi）应用，集成即时通讯、实时音视频互动与 Web3 资产交互。承担移动端核心开发与跨团队远程协作。",
+    "role": "移动端核心开发 · 远程",
+    "tags": [
+      "Flutter",
+      "TRTC / OpenIM",
+      "Web3"
+    ],
+    "images": [
+      [
+        "okchat-social.png",
+        "OkChat · 产品宣传与好友会话"
+      ],
+      [
+        "okchat-messages.png",
+        "OkChat · 即时消息与语音交流"
+      ],
+      [
+        "okchat-privacy.png",
+        "OkChat · 通信体验宣传页"
+      ]
+    ],
+    "video": null,
+    "links": [
+      {
+        "name": "前往 Google Play",
+        "url": "https://play.google.com/store/apps/details?id=org.okchat.live"
+      }
+    ],
+    "story": "在海外社交产品中，通信体验需要同时照顾即时性、跨端状态与弱网环境。围绕会话、音视频和钱包交互推进移动端架构与功能迭代。",
+    "features": [
+      [
+        "实时音视频 · TRTC",
+        "主导腾讯云 TRTC 在双端的接入与调优，围绕海外弱网环境优化进房耗时、音视频卡顿、回声消除与抗抖动能力。"
+      ],
+      [
+        "即时通讯 · OpenIM",
+        "深度集成 OpenIM，封装会话列表、多类型富媒体消息、消息漫游、离线推送及多端状态同步。"
+      ],
+      [
+        "Web3 交互",
+        "接入钱包登录、签名授权、链上转账、资产展示与智能合约交互，兼顾交互路径与安全边界。"
+      ]
+    ],
+    "visual": "posters",
+    "period": "2026.07 — 至今",
+    "image_width": 1242,
+    "image_height": 2688
+  },
+  {
+    "slug": "hangmaguan",
+    "name": "棋乐融融 · 杭麻馆",
+    "en": "LOCAL PLAY",
+    "category": "commercial",
+    "kind": "商业项目",
+    "status": "App Store",
+    "tone": "sand",
+    "tagline": "熟悉的玩法，流畅的体验。",
+    "description": "面向地方玩法的棋牌游戏。参与 Android 与 Cocos 开发、游戏大厅与功能页实现，以及原生端和游戏引擎之间的通信。",
+    "role": "Android / Cocos 开发",
+    "tags": [
+      "Android / Cocos",
+      "TypeScript",
+      "跨端通信"
+    ],
+    "images": [
+      [
+        "hangmaguan-login.png",
+        "棋乐融融 · 登录入口"
+      ],
+      [
+        "hangmaguan-lobby.png",
+        "棋乐融融 · 游戏大厅与功能入口"
+      ],
+      [
+        "hangmaguan-game.png",
+        "棋乐融融 · 本地化麻将玩法"
+      ]
+    ],
+    "video": null,
+    "links": [
+      {
+        "name": "前往 App Store",
+        "url": "https://apps.apple.com/cn/app/id6503023952"
+      }
+    ],
+    "story": "面向地方市场的家乡棋牌游戏，围绕本地化玩法与长期使用体验迭代。担任 Android 与 Cocos 开发，参与需求分析、技术选型与核心功能实现。",
+    "features": [
+      [
+        "大厅与功能页面",
+        "基于 Cocos 与 TypeScript 主导游戏大厅及功能页开发，推进模块化架构与渲染优化。"
+      ],
+      [
+        "原生与引擎通信",
+        "设计并实现游戏引擎与 Android 原生页面的通信机制，处理页面跳转、数据同步与跨端性能问题。"
+      ],
+      [
+        "交付与运行",
+        "参与从需求分析、技术选型到核心功能开发的过程，支持项目交付与上线后的稳定迭代。"
+      ]
+    ],
+    "visual": "landscape",
+    "period": "2024.08 — 2025.10",
+    "image_width": 626,
+    "image_height": 288
+  },
+  {
+    "slug": "remote-control",
+    "name": "分布式远程播控系统",
+    "en": "AGENT × DEVICES",
+    "category": "engineering",
+    "kind": "工程系统",
+    "status": "项目经历",
+    "tone": "blue",
+    "tagline": "让异地设备，进入同一条可执行的工作流。",
+    "description": "面向异地多台机顶盒（STB）的自动化运维与信号监控，自主研发软硬协同的分布式智能控制系统。",
+    "role": "独立开发",
+    "tags": [
+      "Android / OpenClaw",
+      "Skills / Tools",
+      "容错 Harness"
+    ],
+    "period": "2026.02 — 2026.06",
+    "images": [],
+    "video": null,
+    "links": [],
+    "story": "面向异地多台机顶盒（STB）的自动化运维与信号监控，自主研发软硬协同的分布式智能控制系统。",
+    "features": [
+      [
+        "底层能力工具化",
+        "把 Android 底层控制、红外通信协议和局域网指令封装为 Agent 可调用的 Skills / Tools，连接设备能力与上层工作流。"
+      ],
+      [
+        "多智能体容错 Harness",
+        "设计执行与监控工作流，引入多智能体诊断和自愈机制，处理长链条异步任务的死锁问题。"
+      ],
+      [
+        "软硬协同",
+        "围绕异地多台 STB 的远程操作、信号监控和运维协同，将 Android、红外与局域网控制纳入统一系统。"
+      ]
+    ],
+    "visual": "concept",
+    "concept": {
+      "type": "network",
+      "label": "DISTRIBUTED CONTROL",
+      "hub": "OpenClaw · Harness",
+      "nodes": [
+        "Android 控制",
+        "红外通信",
+        "局域网指令"
+      ],
+      "footer": "执行 → 监控 → 诊断与自愈"
+    }
+  },
+  {
+    "slug": "xinxi",
+    "name": "心犀",
+    "en": "AI SOCIAL",
+    "category": "commercial",
+    "kind": "商业项目",
+    "status": "项目经历",
+    "tone": "lavender",
+    "tagline": "让智能匹配，成为自然的社交体验。",
+    "description": "以大模型驱动的 AI 社交应用，提供智能匹配与沉浸式交流体验，负责 iOS 与 Android 双端架构和核心交互。",
+    "role": "Flutter 双端开发",
+    "tags": [
+      "Flutter / GetX",
+      "IM",
+      "AI 社交"
+    ],
+    "period": "2026.05 — 2026.08",
+    "images": [],
+    "video": null,
+    "links": [],
+    "story": "以大模型驱动的 AI 社交应用，提供智能匹配与沉浸式交流体验，负责 iOS 与 Android 双端架构和核心交互。",
+    "features": [
+      [
+        "双端架构基建",
+        "从 0 到 1 搭建 iOS / Android 双端架构，以 GetX 管理路由与状态，制定开发规范并保持跨端 UI 一致。"
+      ],
+      [
+        "IM 核心模块",
+        "主导 IM 模块与 UI 封装，处理会话列表、消息漫游、离线推送和多端状态同步。"
+      ],
+      [
+        "AI 交互调优",
+        "协同后端接入 AI 判词与匹配逻辑，使用 Flutter 动画实现高斯模糊与互动动效，打磨聊天与匹配体验。"
+      ]
+    ],
+    "visual": "concept",
+    "concept": {
+      "type": "match",
+      "label": "AI × CONNECTION",
+      "hub": "心犀",
+      "nodes": [
+        "智能匹配",
+        "即时交流",
+        "互动动效"
+      ],
+      "footer": "Flutter · iOS + Android"
+    }
+  },
+  {
+    "slug": "igaming",
+    "name": "海外泛娱乐与休闲竞技平台",
+    "en": "OVERSEAS DISTRIBUTION",
+    "category": "commercial",
+    "kind": "商业项目",
+    "status": "项目经历",
+    "tone": "sand",
+    "tagline": "从客户端实现，到海外发行与持续运行。",
+    "description": "面向南亚（印度）及海外新兴市场的休闲互动与实时竞技平台，参与动态化分发、用户获取、上架与运行维护。",
+    "role": "移动端开发",
+    "tags": [
+      "iGaming / 印度市场",
+      "Adjust / AppsFlyer",
+      "PWA"
+    ],
+    "period": "2025.01 — 2025.10",
+    "images": [],
+    "video": null,
+    "links": [],
+    "story": "面向南亚（印度）及海外新兴市场的休闲互动与实时竞技平台，参与动态化分发、用户获取、上架与运行维护。",
+    "features": [
+      [
+        "AB 包与版本分发",
+        "设计并实现客户端 AB 面切换、热更新及云端配置方案；完成海外企业开发者账号申请与邓白氏认证，支持包体发布与版本维护。"
+      ],
+      [
+        "买量与归因",
+        "接入 Adjust、AppsFlyer 归因 SDK 与关键转化埋点，打通 Facebook / Google 广告链路与 DeepLink 唤醒。"
+      ],
+      [
+        "PWA 方案",
+        "实现网页容器化、添加桌面图标与离线缓存，提供商店之外的访问入口。"
+      ],
+      [
+        "服务器与稳定性",
+        "部署维护海外 Linux 服务器；针对低端设备和弱网环境优化长连接心跳及进程保活，改善连接稳定性。"
+      ]
+    ],
+    "visual": "concept",
+    "concept": {
+      "type": "distribution",
+      "label": "BUILD · DISTRIBUTE · OPERATE",
+      "hub": "海外移动产品",
+      "nodes": [
+        "版本分发",
+        "获客归因",
+        "运行维护"
+      ],
+      "footer": "AB 版本 · DeepLink · PWA"
+    }
+  },
+  {
+    "slug": "tv-suite",
+    "name": "运营商大屏应用矩阵",
+    "en": "IPTV / OTT",
+    "category": "engineering",
+    "kind": "工程系统",
+    "status": "项目经历",
+    "tone": "mint",
+    "tagline": "把教育与娱乐，带到客厅的大屏上。",
+    "description": "成长微课、天使宝贝、乐游世界、乐趣园：面向全国各省运营商大屏端的教育娱乐应用矩阵。",
+    "role": "核心开发",
+    "tags": [
+      "Android / IPTV",
+      "播放器 SDK",
+      "遥控器导航"
+    ],
+    "period": "2019.06 — 2025.10",
+    "images": [],
+    "video": null,
+    "links": [],
+    "story": "成长微课、天使宝贝、乐游世界、乐趣园：面向全国各省运营商大屏端的教育娱乐应用矩阵。",
+    "features": [
+      [
+        "多省运营商适配",
+        "适配计费接口、播放器 SDK 与各省技术规范，支持浙江、安徽、河南、海南、广东移动及天津联通等运营商的上架与长期技术维护。"
+      ],
+      [
+        "遥控器交互",
+        "围绕电视遥控器重构焦点寻址与页面导航，让大屏操作路径更清晰、选择更顺畅。"
+      ],
+      [
+        "低算力设备优化",
+        "针对机顶盒进行内存、复杂列表与 UI 渲染调优，改善低算力硬件上的帧率和交互稳定性。"
+      ],
+      [
+        "落地规模",
+        "系列业务累计覆盖数千万家庭用户，形成持续运营的教育与娱乐应用矩阵。"
+      ]
+    ],
+    "visual": "concept",
+    "concept": {
+      "type": "tv",
+      "label": "LIVING ROOM EXPERIENCES",
+      "hub": "运营商大屏",
+      "nodes": [
+        "成长微课",
+        "天使宝贝",
+        "乐游世界",
+        "乐趣园"
+      ],
+      "footer": "计费适配 · 视频播放 · 焦点导航"
+    }
+  }
+]

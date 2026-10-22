@@ -1,5 +1,6 @@
 import argparse
 import fcntl
+import os
 import time
 
 from studio.config import data_dir
@@ -8,6 +9,7 @@ from studio.domain.models import FIXTURE_WARNING, PATTERN_WARNING, Request
 from studio.domain.rules import back_label
 from studio.providers.domestic import ProviderError
 from studio.repositories.db import analyses, candidates, engine_for, identifier, jobs, now, recipes
+from studio.repositories.store import QuotaError
 from studio.services.composite import composite
 from studio.services.real_jobs import run_real
 from studio.services.workflow import Workflow
@@ -28,6 +30,17 @@ def run_once(workflow):
     request = Request.model_validate(job["payload"]["request"])
     started = time.monotonic()
     try:
+        reserve = getattr(workflow, "reserve_public_call", None)
+        if reserve and request.execution == "real":
+            if not reserve(job["id"]):
+                raise ProviderError(
+                    "此任务已有模型调用记录；未重复调用，请人工核查", state="outcome_unknown"
+                )
+        if request.mode.startswith("CONTENT_"):
+            from studio.services.content import run_content
+
+            run_content(workflow, job)
+            return True
         if request.mode == "CUTOUT":
             from studio.services.cutout import run_cutout
 
@@ -116,7 +129,9 @@ def run_once(workflow):
     except Exception as exc:
         # Do not log raw provider responses, credentials or signed URLs.
         state = (
-            exc.state
+            "failed"
+            if isinstance(exc, QuotaError)
+            else exc.state
             if isinstance(exc, ProviderError)
             else (
                 "outcome_unknown"
@@ -126,7 +141,7 @@ def run_once(workflow):
         )
         message = (
             str(exc)
-            if isinstance(exc, ProviderError)
+            if isinstance(exc, (ProviderError, QuotaError))
             or (request.execution == "fixture" and isinstance(exc, ValueError))
             else f"{type(exc).__name__}；结果未确认，请查看本地任务并人工核查"
         )
@@ -141,18 +156,37 @@ def main():
     parser.add_argument("--once", action="store_true")
     args = parser.parse_args()
     root = data_dir()
-    workflow = Workflow(engine_for(root), root)
+    multiuser = os.environ.get("STUDIO_AUTH_ENABLED") == "1"
+    if multiuser:
+        from studio.services.accounts import Accounts
+        from studio.services.tenants import Tenants
+
+        accounts = Accounts(root)
+        tenants = Tenants(accounts)
+        recovered = set()
+    else:
+        workflow = Workflow(engine_for(root), root)
     with (root / "worker.lock").open("a") as lock:
         try:
             fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
         except BlockingIOError:
             raise SystemExit("已有 Worker 在运行")
-        recover(workflow)
+        if not multiuser:
+            recover(workflow)
         print(
             "Worker 已启动；Fixture 默认。真实调用仅执行已确认的单次任务，无自动重试。", flush=True
         )
         while True:
-            worked = run_once(workflow)
+            worked = False
+            if multiuser:
+                for user in accounts.users():
+                    selected = tenants.workflow(user)
+                    if user["id"] not in recovered:
+                        recover(selected)
+                        recovered.add(user["id"])
+                    worked = run_once(selected) or worked
+            else:
+                worked = run_once(workflow)
             if args.once:
                 return
             if not worked:

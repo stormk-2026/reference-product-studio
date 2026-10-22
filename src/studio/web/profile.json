@@ -1,0 +1,64 @@
+{
+  "intro": "自 2016 年从事移动端开发，覆盖 Android 原生、Flutter 跨端、即时通讯、实时音视频、IPTV / OTT、Web3 与 AI 工具。具备远程协作和从需求拆解、UI/UX 还原、架构设计到测试、部署的完整交付经验。",
+  "skills": [
+    [
+      "移动端与跨端",
+      "Android / Kotlin / Java；Flutter / Dart（GetX、Riverpod）；Cocos / TypeScript；MethodChannel / JSBridge。"
+    ],
+    [
+      "通信与 Web3",
+      "OpenIM 与定制 IM SDK、TRTC 实时音视频、消息漫游与离线推送；钱包登录、签名授权、智能合约与 Farcaster Mini DApp。"
+    ],
+    [
+      "全栈与基础设施",
+      "Python / FastAPI、Linux、Git / CI/CD、HTTPS、OSS；账号隔离、任务调度、调用额度和限流。"
+    ],
+    [
+      "AI 与 Agent 工程",
+      "Cursor / Codex / Claude Code 辅助研发，Prompt Engineering、OpenClaw / Hermes 实践；底层能力 Tools 化封装、执行监控与容错 Harness。"
+    ],
+    [
+      "终端与海外发行",
+      "IPTV / OTT 运营商适配、局域网与红外控制、低算力设备性能优化；AB 版本分发、PWA、Adjust / AppsFlyer 归因与 DeepLink。"
+    ]
+  ],
+  "jobs": [
+    {
+      "name": "自由职业 / 远程协作",
+      "role": "移动端与全栈开发",
+      "period": "2025.10 — 至今",
+      "points": [
+        "主导或参与海外社交金融、AI 社交、效率工具的双端架构与迭代，独立构建流境、觅境、AI 视觉工作台、远程播控系统与 DApp。",
+        "负责跨端架构、音视频 / IM 接入、Web3 钱包交互及前后端部署，通过 AI 辅助研发与验证完成交付。"
+      ]
+    },
+    {
+      "name": "杭州盛迈通信技术有限公司",
+      "role": "移动端开发工程师",
+      "period": "2019.06 — 2025.10",
+      "points": [
+        "独立负责 IPTV / OTT 移动业务线，开发教育、娱乐、社交等系列应用。",
+        "完成浙江、安徽、河南、海南、广东移动及天津联通等多省运营商大屏产品适配、上架与长期技术支持。",
+        "优化低算力机顶盒的内存、UI 渲染与复杂列表；主导 Flutter 在新业务中的技术调研与引入。"
+      ]
+    },
+    {
+      "name": "天津星宇伟业科技有限公司",
+      "role": "Android 开发",
+      "period": "2018.11 — 2019.06",
+      "points": [
+        "负责移动端核心开发，带领团队进行开发进度管理与客户端发布。",
+        "主导技术方案验证、评估及压力测试，支持稳定交付。"
+      ]
+    },
+    {
+      "name": "天津拓海科技有限公司",
+      "role": "Android 开发",
+      "period": "2016.06 — 2018.11",
+      "points": [
+        "负责移动端开发，参与商城、支付、IM、企业运维及数字资产类项目的研发。"
+      ]
+    }
+  ],
+  "education": "天津大学仁爱学院 · 通信工程本科 · 2012 — 2016"
+}

@@ -5,7 +5,7 @@ const fs=require('node:fs');
 function setup(){
  const elements={'scene-status':{},'scene-file':{value:'same.png'},file:{value:''},'upload-target':{value:'background-image'}};
  const context=vm.createContext({document:{getElementById:id=>elements[id]}});
- const source=fs.readFileSync('src/studio/web/static/app.js','utf8').replace("start().catch(err=>message(err.message,true));",'');
+ const source=fs.readFileSync('src/studio/web/static/app.js','utf8').replace(/^start\(\)\..*$/m,'');
  vm.runInContext(source,context);
  return {elements,context};
 }

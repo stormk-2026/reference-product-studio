@@ -8,7 +8,7 @@ function setup(mode){
  elements.products={selectedOptions:[{value:'own-product'}]};
  elements['change-background']={checked:true};elements['change-subject']={checked:false};
  const context=vm.createContext({document:{getElementById:id=>elements[id]}});
- vm.runInContext(fs.readFileSync('src/studio/web/static/app.js','utf8').replace("start().catch(err=>message(err.message,true));",''),context);
+ vm.runInContext(fs.readFileSync('src/studio/web/static/app.js','utf8').replace(/^start\(\)\..*$/m,''),context);
  vm.runInContext("S.tool='promo'",context);
  return {elements,context};
 }

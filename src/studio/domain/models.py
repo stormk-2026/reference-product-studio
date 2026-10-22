@@ -3,6 +3,7 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 from studio.domain.canvas import CanvasRatio
+from studio.domain.content import ContentBrief, ContentDeck
 
 
 class StrictModel(BaseModel):
@@ -66,6 +67,10 @@ class Request(StrictModel):
         "A_white",
         "A_views",
         "CUTOUT",
+        "CONTENT_COPY",
+        "CONTENT_POLISH",
+        "CONTENT_SCENE",
+        "CONTENT_RENDER",
         "CHECK",
         "B1",
         "B2",
@@ -73,6 +78,11 @@ class Request(StrictModel):
         "C1",
         "C2",
     ]
+    content_brief: ContentBrief | None = None
+    content_deck: ContentDeck | None = None
+    content_sample: bool = True
+    content_page_index: int = Field(default=0, ge=0, le=5)
+    content_polish_note: str = Field(default="", max_length=500)
     check_candidate_id: str | None = None
     product_ids: list[str] = Field(min_length=1, max_length=10)
     product_view_ids: list[str] = Field(default_factory=list, max_length=8)

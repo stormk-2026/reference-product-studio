@@ -48,7 +48,7 @@ def test_ratio_reaches_provider_and_export(tmp_path, monkeypatch, ratio, executi
 
 def test_ratio_choices_match_request_schema(tmp_path):
     with TestClient(create_app(tmp_path), base_url="http://localhost") as client:
-        page = client.get("/").text
+        page = client.get("/studio").text
     choices = Request.model_json_schema()["properties"]["ratio"]["enum"]
     for ratio in choices:
         assert f"<option>{ratio}</option>" in page

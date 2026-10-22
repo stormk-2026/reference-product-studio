@@ -14,7 +14,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 RUN sed -i "s|http://deb.debian.org|${DEBIAN_MIRROR}|g" /etc/apt/sources.list.d/debian.sources \
     && apt-get -o Acquire::By-Hash=false update \
-    && apt-get install -y --no-install-recommends libgomp1 \
+    && apt-get install -y --no-install-recommends libgomp1 fonts-noto-cjk \
     && rm -rf /var/lib/apt/lists/*
 COPY --from=ghcr.io/astral-sh/uv:0.11.6 /uv /usr/local/bin/uv
 RUN groupadd --gid 10001 studio \

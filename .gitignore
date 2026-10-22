@@ -31,3 +31,14 @@ runtime.env
 backups/
 *.tar.gz
 *.partial
+
+# Private account bootstrap files and TLS state
+public-login.txt
+owner-login.txt
+.htpasswd
+acme.json
+letsencrypt/
+
+*.htpasswd
+
+._*

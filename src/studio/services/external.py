@@ -12,14 +12,16 @@ SEEDREAM_MODEL = "doubao-seedream-5-0-pro-260628"
 
 
 def external_plan(request: Request, settings):
-    understanding = request.mode in {"A", "C_analyze", "CHECK"}
+    understanding = request.mode in {"A", "C_analyze", "CHECK", "CONTENT_COPY", "CONTENT_POLISH"}
     if understanding:
         if settings.moonshot_base_url.rstrip("/") != KIMI_BASE or settings.kimi_model != "kimi-k3":
             raise ValueError("本次适配器仅支持 Kimi 中国区官方地址和 kimi-k3；未静默替换配置")
         if not settings.moonshot_api_key.get_secret_value():
             raise ValueError("请在本项目 .env 填写 MOONSHOT_API_KEY")
         image_ids = (
-            [request.reference_id]
+            []
+            if request.mode == "CONTENT_POLISH"
+            else [request.reference_id]
             if request.mode == "C_analyze"
             else request.product_ids + ([request.back_id] if request.back_id else [])
         )
@@ -42,7 +44,7 @@ def external_plan(request: Request, settings):
             raise ValueError(
                 "当前 Seedream 适配器未验证蒙版局部编辑能力，不能静默降级；B1 蒙版仅在本地合成"
             )
-        image_ids = [] if request.mode == "B1" else list(request.product_ids)
+        image_ids = [] if request.mode in {"B1", "CONTENT_SCENE"} else list(request.product_ids)
         if request.mode == "B2":
             image_ids.extend(request.product_view_ids)
         if request.mode == "C1" or (
@@ -53,7 +55,12 @@ def external_plan(request: Request, settings):
             image_ids.append(request.back_id)
         if request.mode == "B2" and request.change_subject and request.subject_id:
             image_ids.append(request.subject_id)
-        if request.background_id and request.mode not in {"A", "C_analyze", "CHECK"}:
+        if request.background_id and request.mode not in {
+            "A",
+            "C_analyze",
+            "CHECK",
+            "CONTENT_COPY",
+        }:
             image_ids.append(request.background_id)
         provider, model, recipient = (
             "volcengine",

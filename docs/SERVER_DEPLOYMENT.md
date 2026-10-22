@@ -1,73 +1,53 @@
-# 服务器部署：私有测试阶段
+# 服务器部署：公开个人站与私有 AI 工作台
 
-当前基线为 v0.1 Beta，仍是单用户应用。本部署只通过 SSH 隧道访问，不是多用户公网发布版。备案期间不开放网站公网端口；后续完成登录、用户数据隔离、额度控制和 HTTPS 后，再启用正式域名。
+当前站点由 FastAPI/Jinja、独立 Worker、Nginx HTTPS 和应用账号认证组成。首页、作品及履历公开；`/studio` 与素材、任务、历史、下载 API 必须登录。邮箱验证码注册、账号隔离和体验额度见 [账号部署](ACCOUNTS.md)。
 
-## 目录与边界
+## 目录与配置
 
-- `/opt/storm-studio/releases/v0.1.0b1-server2`：应用代码和部署配置。
-- `/opt/storm-studio/config/runtime.env`：模型与存储配置，root 读取，权限 600；不进入 Git 或镜像。
-- `/opt/storm-studio/data`：此服务器独立的数据与模型目录；容器用户 10001。
-- `/opt/storm-studio/backups`：数据库及其引用图片的备份；不包含密钥、权重。
+- `/opt/storm-studio/releases/<version>`：版本化源码与 Compose 配置。
+- `/opt/storm-studio/current`：指向当前已验证版本的链接。
+- `/opt/storm-studio/config/runtime.env`：服务器私有运行配置，权限600，不进入 Git 或镜像。
+- `/opt/storm-studio/data`：账号、任务数据库及本地素材；运行用户10001。
+- `/opt/storm-studio/backups`：账号、租户数据库及引用图片的私有备份。
 
-Compose 项目名为 `storm-studio`。Web 仅映射 `127.0.0.1:18765`，Worker 不映射端口。不会改动已有 Docker 项目的端口、网络、卷或配置。两服务共享同一数据目录；只启动一个 Web 进程和一个 Worker，保留当前内存签名及任务锁语义。
+Compose 通过 `STUDIO_ENV_FILE`、`STUDIO_DATA_PATH`、`STUDIO_BACKUP_PATH` 支持自定义目录。Web 和 Worker 使用同一数据目录、独立进程。首次安装先配置主账户与权限，遵循[账号初始化步骤](ACCOUNTS.md)；升级时保留现有账号数据库及 runtime.env。
 
-Web 限制 384MiB、0.5 CPU，Worker 限制 1536MiB、1 CPU。首次 512×512 合成图本地抠图验证得到透明 RGBA，初始化及推理耗时约102秒，进程峰值约1249MiB；真实大图仍需观察峰值，不能据此宣称高并发可用。服务资源不足时先排查，不能自动重试收费生成。
+公开部署启用 `STUDIO_AUTH_ENABLED=1`。只有本机可信 Nginx 覆盖客户端地址且应用端口为回环绑定时，才启用 `STUDIO_TRUST_PROXY=1`。邮件实际送达验证通过后再开启注册；模型与 OSS 凭据仅填写在私有运行配置中。
 
-## 首次部署
+## 构建与运行
 
-在上述发布目录执行：
+在版本目录使用 `docker compose -f deploy/compose.yaml build` 构建，再通过 `docker compose -f deploy/compose.yaml up -d --wait web worker` 启动。`STUDIO_IMAGE` 可指定版本标签，Web 和 Worker 必须使用同一版本。
 
-```sh
-docker compose -f deploy/compose.yaml build web
-docker compose -f deploy/compose.yaml run --rm --no-deps web alembic upgrade head
-docker compose -f deploy/compose.yaml up -d web worker
-docker compose -f deploy/compose.yaml ps
-```
+镜像包含本地抠图运行依赖与 Noto CJK 中文字体。发布包必须包含 portfolio.json、profile.json、templates、static；公开作品素材由[独立目录](PORTFOLIO.md)提供。
 
-模型权重安装在 `data/models/u2net.onnx`，固定校验和沿用 `scripts/setup_cutout.py`。服务器可下载，也可从已验证的本地安装复制公开权重，不迁移本地用户图片。默认不开付费任务，真实生成仍需要页面预览和确认。
+应用仅绑定 `127.0.0.1:18765`，Worker 不监听公网端口。首次内部验收可通过 SSH 本地转发连接这个端口。不要在已有项目服务器上覆盖其他站点配置或重启无关服务。
 
-## 访问
+## HTTPS 与反向代理
 
-本机终端建立隧道，替换服务器地址：
+通用配置见 [Nginx 模板](../deploy/nginx.conf.example)。将示例域名替换为自己的域名，并对应调整应用的域名白名单、HTTPS 同源校验和 Secure Cookie 条件。
 
-```sh
-ssh -N -L 127.0.0.1:18765:127.0.0.1:18765 root@服务器地址
-```
+1. 配置域名解析及 TCP 80/443 入站规则；应用端口继续保持回环绑定。
+2. 准备 Nginx、Certbot 和 HTTP 验证目录 `/.well-known/acme-challenge/`，使用 webroot 验证签发证书。
+3. 配置 HTTPS 站点、HTTP 跳转及站点专属认证/请求限流；登录由应用处理。
+4. 执行 `nginx -t` 后加载配置。启用证书续期定时器，续期部署钩子执行配置检查与 Nginx reload。
+5. 使用 `certbot renew --dry-run --no-random-sleep-on-renew` 验证续期；公网检查 HTTPS、备案信息及下述访问边界。
 
-浏览器打开 `http://127.0.0.1:18765/`。该地址通过 SSH 到达服务器；原本机开发环境仍用 8765。停止此 SSH 进程只关闭访问通道，不停止服务器服务。不要把 Compose 映射改成 `0.0.0.0` 来绕过域名与登录适配。
+## 升级与回退
 
-## 备份与恢复
+先确认所有租户没有 queued/running 任务，再创建一致性备份。构建独立新版本镜像，校验模板、公开资源和功能后，仅更新本站 Web/Worker。切换前再次检查活跃任务，避免中断刚提交的生成。
 
-```sh
-docker compose -f deploy/compose.yaml --profile ops run --rm --no-deps backup
-```
+新版本健康检查通过后再更新 current；保留上一版镜像和源码供回退。运行配置、账号数据库和素材目录不由源码包覆盖，不以重新调用付费模型修复部署问题。
 
-使用 SQLite 在线备份 API 获取一致数据库快照，再打包快照所引用的所有图片；缺失图片会使备份失败，不把不完整归档标成成功。恢复时先停止本项目服务，将归档解压到新的数据目录，补充公开模型权重并设为 UID/GID 10001，使用 `STUDIO_DATA_PATH` 指向新目录后验证。不要直接覆盖正在使用的数据目录。当前备份仍在同一服务器，正式开放前还应配置定时与异机备份和保留周期。
+## 备份与验收
 
-## 正式多用户上线前
+使用 `docker compose -f deploy/compose.yaml run --rm backup` 创建备份。备份包含账号恢复所需的密码哈希、租户数据库和引用图片，属于私有运行数据，不提交 Git。备份去除登录会话、验证码与限流事件；OSS 开启时备份容器需要读取同一存储配置。
 
-- 注册、密码哈希、登录会话与登出，注册邀请或审核方式。
-- 图片、任务、候选、批量样张、导出、删除、评价等接口全部按用户隔离，不能仅隐藏前端列表。
-- 按用户分配生成额度，提交时原子扣留额度，处理失败与结果未知，不开放无限免费生成。
-- 正式域名白名单、可信反向代理、Secure Cookie、上传与登录限速。
-- 备案完成后配置域名解析、HTTPS、备案信息展示，进行跨账号越权和收费幂等回归。
+独立核验 SQLite 完整性、引用图片 SHA256，以及更新前后任务和素材数量。验收公开首页与项目页、图片/视频、手机布局、主题和联系方式；同时确认匿名私有 API 返回401、工作台跳转登录、账号间素材隔离及原额度保持有效。不要为部署检查自动发送验证码或调用付费模型。
 
-这些是下一阶段改造项，当前部署不宣称已经支持多人注册。
+## 离线构建与素材存储
 
-## 下载较慢时的离线构建
+网络缓慢时可使用 `deploy/Dockerfile.offline`。wheelhouse 的依赖应匹配 uv.lock 的版本与哈希，项目 wheel 必须来自同一版本源代码；不得将旧 wheel 与新页面混合发布。Docker 上下文排除本地配置、运行数据和 macOS `._*` 文件。
 
-验证环境使用了 `deploy/Dockerfile.offline`：先下载 Python 3.11 / Linux x86_64 所需 wheel，按 `uv.lock` 的 SHA256 校验，放进发布目录下的 `wheelhouse/`；再在对应源代码版本上执行 `uv build --wheel --out-dir wheelhouse`，一并放入本项目的纯 Python wheel。安装时再次使用从锁文件导出的 requirements 与 `--require-hashes`，不重新选择依赖版本。缓存目录不进入 Git。
+图片支持本地及私有 OSS，见 [OSS 存储说明](OSS_STORAGE.md)。切换存储后旧本地图片仍可读取，不自动迁移或删除。公开作品媒体与私人生成素材相互独立。
 
-```sh
-docker build --network host \
-  --build-arg DEBIAN_MIRROR=https://mirrors.aliyun.com \
-  --build-arg PYTHON_INDEX=https://mirrors.aliyun.com/pypi/simple \
-  -f deploy/Dockerfile.offline -t storm-studio:0.1.0b1-server2 .
-```
-
-使用同版本源代码生成项目 wheel，不能用旧 wheel 部署新代码。正常联网时可使用前面的 Compose 构建方式。镜像上下文采用白名单，并排除 macOS 的 `._*` 元数据文件，避免将其误识别成数据库迁移脚本。
-
-
-## OSS 适配版本
-
-`server2` 增加私有 OSS 存储支持，2026-09-21 已验证专用 RAM 凭据的实际读写并启用 `STUDIO_ASSET_BACKEND=oss`，详见 [OSS 存储说明](OSS_STORAGE.md)。三条 Fixture 路线、PNG 下载和 ZIP 导出通过，未调用收费模型。旧图片不会自动迁移。备份容器也需要存储配置，以便打包云端图片。
+源码只保存通用配置模板，不包含实际服务器 IP、密码、证书私钥、模型/OSS/SMTP 凭据或用户数据库。官网 URL、指定产品素材及 README 首页截图经用户授权公开。

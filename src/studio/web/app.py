@@ -1,16 +1,20 @@
 import io
 import json
+import os
 import secrets
 import zipfile
+from datetime import datetime
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi import Request as WebRequest
-from fastapi.responses import JSONResponse, Response
+from fastapi.responses import JSONResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from PIL import Image, ImageDraw
 from pydantic import Field
+from starlette.concurrency import run_in_threadpool
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from studio.config import data_dir
@@ -34,11 +38,17 @@ from studio.repositories.db import (
     jobs,
     recipes,
 )
+from studio.repositories.store import QuotaError
+from studio.services.accounts import Accounts, AuthError, RateLimitError
 from studio.services.batch import preview_remaining, submit_remaining
+from studio.services.content_batch import preview_series, series_status, submit_series
+from studio.services.email_registration import EmailRegistration, MailUnavailable, SMTPMailer
+from studio.services.tenants import Tenants, WorkflowProxy, current_workflow
 from studio.services.workflow import Workflow
 from studio.storage.backend import StorageError
 from studio.storage.images import MAX_BYTES
 from studio.web.copy import COPY
+from studio.web.portfolio import PROFILE, PROJECT_BY_SLUG, PROJECTS, PUBLIC_PAGES, SOCIALS
 
 
 class EditBody(StrictModel):
@@ -50,11 +60,54 @@ class FavoriteBody(StrictModel):
     favorite: bool
 
 
-def create_app(root=None):
+class Credentials(StrictModel):
+    username: str = Field(min_length=3, max_length=254)
+    password: str = Field(min_length=10, max_length=128)
+
+
+class EmailBody(StrictModel):
+    email: str = Field(min_length=3, max_length=254)
+
+
+class EmailSignup(EmailBody):
+    password: str = Field(min_length=10, max_length=128)
+    challenge_id: str = Field(pattern=r"^[A-Za-z0-9_-]{32}$")
+    code: str = Field(pattern=r"^[0-9]{6}$")
+
+
+def create_app(root=None, *, auth_enabled=None, mailer=None, registration_enabled=None):
     root = root or data_dir()
-    workflow = Workflow(engine_for(root), root)
+    auth_enabled = (
+        (os.environ.get("STUDIO_AUTH_ENABLED") == "1") if auth_enabled is None else auth_enabled
+    )
+    accounts = Accounts(root) if auth_enabled else None
+    tenants = Tenants(accounts) if accounts else None
+    workflow = WorkflowProxy() if auth_enabled else Workflow(engine_for(root), root)
     app = FastAPI(title=COPY["title"], docs_url=None, redoc_url=None, openapi_url=None)
     app.state.workflow = workflow
+    app.state.accounts = accounts
+    registration = (
+        EmailRegistration(
+            accounts,
+            mailer or SMTPMailer(),
+            os.environ.get("STUDIO_REGISTRATION_ENABLED") == "1"
+            if registration_enabled is None
+            else registration_enabled,
+        )
+        if accounts
+        else None
+    )
+    app.state.registration = registration
+
+    def request_peer(request):
+        peer = request.client.host if request.client else "unknown"
+        return (
+            request.headers.get("x-real-ip", peer)
+            if os.environ.get("STUDIO_TRUST_PROXY") == "1"
+            else peer
+        )
+
+    app.state.tenants = tenants
     web = Path(__file__).parent
     app.mount("/static", StaticFiles(directory=web / "static"), name="static")
     templates = Jinja2Templates(directory=web / "templates")
@@ -63,7 +116,13 @@ def create_app(root=None):
     async def local_security(request: WebRequest, call_next):
         if request.method not in {"GET", "HEAD", "OPTIONS"}:
             origin = request.headers.get("origin", "")
-            if origin != str(request.base_url).rstrip("/"):
+            host = request.headers.get("host", "").split(":", 1)[0].lower()
+            expected_origin = (
+                "https://stormstudio.top"
+                if host == "stormstudio.top"
+                else str(request.base_url).rstrip("/")
+            )
+            if origin != expected_origin:
                 return JSONResponse({"detail": "拒绝非同源请求"}, status_code=403)
             cookie, token = (
                 request.cookies.get("studio_csrf", ""),
@@ -77,20 +136,99 @@ def create_app(root=None):
             chunks = []
             async for chunk in request.stream():
                 total += len(chunk)
-                if total > MAX_BYTES + 65536:
+                if total > (
+                    8192 if request.url.path.startswith("/api/auth/") else MAX_BYTES + 65536
+                ):
                     return JSONResponse({"detail": "请求超过大小上限"}, status_code=413)
                 chunks.append(chunk)
             request._body = b"".join(chunks)
-        response = await call_next(request)
+        context_token = None
+        if accounts:
+            user = await run_in_threadpool(
+                accounts.resolve, request.cookies.get("studio_session", "")
+            )
+            request.state.user = user
+            public = (
+                request.url.path in PUBLIC_PAGES
+                or request.url.path.startswith("/projects/")
+                or request.url.path
+                in {
+                    "/login",
+                    "/api/session",
+                    "/api/auth/login",
+                    "/api/auth/register",
+                    "/api/auth/send-code",
+                    "/api/auth/options",
+                }
+                or request.url.path.startswith("/static/")
+            )
+            if not public and not user:
+                return (
+                    RedirectResponse("/login" + tool_query(request), status_code=303)
+                    if request.url.path == "/studio"
+                    else JSONResponse({"detail": "请先登录"}, status_code=401)
+                )
+            if user and not public:
+                selected = await run_in_threadpool(tenants.workflow, user)
+                context_token = current_workflow.set(selected)
+            try:
+                if request.method == "POST" and request.url.path.startswith("/api/auth/"):
+                    peer = request_peer(request)
+                    if request.url.path == "/api/auth/login":
+                        await run_in_threadpool(
+                            accounts.throttle_many,
+                            [("login:" + peer, 15, 900), ("login-global", 100, 900)],
+                        )
+                if user and request.method == "POST":
+                    path = request.url.path
+                    if path == "/api/jobs" or path.endswith(("/submit", "/cutout")):
+                        await run_in_threadpool(
+                            accounts.throttle, "generation:" + user["id"], 4, 60
+                        )
+                    elif path == "/api/assets":
+                        await run_in_threadpool(accounts.throttle, "upload:" + user["id"], 15, 60)
+            except RateLimitError as exc:
+                if context_token is not None:
+                    current_workflow.reset(context_token)
+                return JSONResponse(
+                    {"detail": str(exc)}, status_code=429, headers={"Retry-After": "60"}
+                )
+        try:
+            response = await call_next(request)
+        finally:
+            if context_token is not None:
+                current_workflow.reset(context_token)
         response.headers["Content-Security-Policy"] = (
             "default-src 'self'; img-src 'self' blob:; script-src 'self'; style-src 'self'; frame-ancestors 'none'; form-action 'self'; base-uri 'none'"
         )
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["Referrer-Policy"] = "no-referrer"
-        response.headers["Cache-Control"] = "no-store"
+        response.headers["Cache-Control"] = (
+            "public, max-age=86400"
+            if request.url.path.startswith("/static/portfolio/") and response.status_code < 400
+            else "no-store"
+        )
         return response
 
-    app.add_middleware(TrustedHostMiddleware, allowed_hosts=["localhost", "127.0.0.1", "[::1]"])
+    app.add_middleware(
+        TrustedHostMiddleware, allowed_hosts=["localhost", "127.0.0.1", "[::1]", "stormstudio.top"]
+    )
+
+    @app.exception_handler(QuotaError)
+    async def quota_error(request, exc):
+        return JSONResponse({"detail": str(exc)}, status_code=403)
+
+    @app.exception_handler(RateLimitError)
+    async def rate_limit_error(request, exc):
+        return JSONResponse({"detail": str(exc)}, status_code=429, headers={"Retry-After": "60"})
+
+    @app.exception_handler(MailUnavailable)
+    async def mail_unavailable(request, exc):
+        return JSONResponse({"detail": str(exc)}, status_code=503)
+
+    @app.exception_handler(AuthError)
+    async def auth_error(request, exc):
+        return JSONResponse({"detail": str(exc)}, status_code=400)
 
     @app.exception_handler(ValueError)
     async def bad_input(request, exc):
@@ -100,8 +238,163 @@ def create_app(root=None):
     async def storage_error(request, exc):
         return JSONResponse({"detail": str(exc)}, status_code=503)
 
+    @app.get("/login")
+    def login_page(request: WebRequest):
+        if not accounts or request.state.user:
+            return RedirectResponse("/studio" + tool_query(request), status_code=303)
+        return templates.TemplateResponse(request=request, name="login.html", context={})
+
+    def logged_in(user, request):
+        response = JSONResponse({"username": user["username"], "owner": bool(user["owner"])})
+        response.set_cookie(
+            "studio_session",
+            accounts.issue(user),
+            max_age=7 * 86400,
+            httponly=True,
+            samesite="lax",
+            secure=request.url.hostname == "stormstudio.top",
+        )
+        # Login rotates any anonymous or previous authenticated session.
+        accounts.logout(request.cookies.get("studio_session", ""))
+        return response
+
+    @app.get("/api/auth/options")
+    def auth_options():
+        return {
+            "email_registration": bool(registration and registration.enabled),
+            "message": "验证邮箱后可注册"
+            if registration and registration.enabled
+            else "邮箱注册暂未开放；已有主账户可正常登录",
+        }
+
+    @app.post("/api/auth/send-code")
+    def send_code(body: EmailBody, request: WebRequest):
+        if not registration:
+            raise HTTPException(404)
+        challenge = registration.send_code(body.email, request_peer(request))
+        return {
+            "challenge_id": challenge,
+            "retry_after": 60,
+            "message": "如果该邮箱可注册，验证码已发送；请检查收件箱或垃圾邮件。",
+        }
+
+    @app.post("/api/auth/register")
+    def register(body: EmailSignup, request: WebRequest):
+        if not registration:
+            raise HTTPException(404)
+        user = registration.register(
+            body.email, body.password, body.challenge_id, body.code, request_peer(request)
+        )
+        tenants.workflow(user)
+        return logged_in(user, request)
+
+    @app.post("/api/auth/login")
+    def login(body: Credentials, request: WebRequest):
+        if not accounts:
+            raise HTTPException(404)
+        accounts.throttle("username:" + body.username.lower().strip(), 30, 900)
+        return logged_in(accounts.login(body.username, body.password), request)
+
+    @app.post("/api/auth/logout")
+    def logout(request: WebRequest):
+        if accounts:
+            accounts.logout(request.cookies.get("studio_session", ""))
+        response = JSONResponse({"ok": True})
+        response.delete_cookie("studio_session")
+        return response
+
+    @app.get("/api/account")
+    def account(request: WebRequest):
+        if not accounts:
+            return {"enabled": False}
+        user = request.state.user
+        return {
+            "enabled": True,
+            "username": user["username"],
+            "owner": bool(user["owner"]),
+            "quota": workflow.store.quota(),
+        }
+
+    def tool_query(request):
+        tool = request.query_params.get("tool")
+        return "?tool=" + tool if tool in {"promo", "drawing", "content"} else ""
+
+    def portfolio_page(request, page, title, description, project=None):
+        return templates.TemplateResponse(
+            request=request,
+            name="portfolio_" + page + ".html",
+            context={
+                "page": page,
+                "title": title,
+                "description": description,
+                "projects": PROJECTS,
+                "project_by_slug": PROJECT_BY_SLUG,
+                "profile": PROFILE,
+                "project": project,
+                "socials": SOCIALS,
+                "year": datetime.now(ZoneInfo("Asia/Shanghai")).year,
+            },
+        )
+
     @app.get("/")
-    def home(request: WebRequest):
+    def public_home(request: WebRequest):
+        return portfolio_page(
+            request,
+            "home",
+            "stormg 的产品与实践",
+            "郭慧康 / stormg，Android、Flutter 开发者。探索流境、觅境与 AI 视觉工作台。",
+        )
+
+    @app.get("/projects")
+    def portfolio_projects(request: WebRequest):
+        return portfolio_page(
+            request, "projects", "作品", "个人产品、在线工具，以及与团队共同完成的商业项目。"
+        )
+
+    @app.get("/projects/{slug}")
+    def portfolio_project(slug: str, request: WebRequest):
+        project = PROJECT_BY_SLUG.get(slug)
+        if project is None:
+            raise HTTPException(404, "项目不存在")
+        return portfolio_page(request, "project", project["name"], project["description"], project)
+
+    @app.get("/tools")
+    def portfolio_tools(request: WebRequest):
+        return RedirectResponse("/projects/visual-workbench", status_code=308)
+
+    @app.get("/about")
+    def portfolio_about(request: WebRequest):
+        return portfolio_page(
+            request, "about", "关于 stormg", "郭慧康的开发经历、个人产品与工程实践。"
+        )
+
+    @app.get("/resume")
+    def portfolio_resume(request: WebRequest):
+        return portfolio_page(
+            request,
+            "resume",
+            "郭慧康 · 简历",
+            "移动端、Flutter 与 AI 产品开发；可打印保存的在线简历。",
+        )
+
+    @app.get("/robots.txt")
+    def robots():
+        return Response(
+            "User-agent: *\nDisallow: /api/\nDisallow: /studio\nDisallow: /login\nSitemap: https://stormstudio.top/sitemap.xml\n",
+            media_type="text/plain",
+        )
+
+    @app.get("/sitemap.xml")
+    def sitemap():
+        paths = sorted(PUBLIC_PAGES - {"/robots.txt", "/sitemap.xml", "/tools"})
+        content = '<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'
+        content += "".join(
+            "<url><loc>https://stormstudio.top" + path + "</loc></url>" for path in paths
+        )
+        return Response(content + "</urlset>", media_type="application/xml")
+
+    @app.get("/studio")
+    def studio_home(request: WebRequest):
         return templates.TemplateResponse(
             request=request,
             name="index.html",
@@ -111,8 +404,22 @@ def create_app(root=None):
     @app.get("/api/session")
     def session(request: WebRequest):
         token = request.cookies.get("studio_csrf") or secrets.token_urlsafe(32)
-        response = JSONResponse({"csrf": token, "copy": COPY, "recipe_fields": RECIPE_FIELDS})
-        response.set_cookie("studio_csrf", token, httponly=True, samesite="strict")
+        response = JSONResponse(
+            {
+                "csrf": token,
+                "copy": COPY,
+                "recipe_fields": RECIPE_FIELDS,
+                "auth_enabled": auth_enabled,
+                "authenticated": bool(getattr(request.state, "user", None)),
+            }
+        )
+        response.set_cookie(
+            "studio_csrf",
+            token,
+            httponly=True,
+            samesite="strict",
+            secure=request.headers.get("host", "").split(":", 1)[0].lower() == "stormstudio.top",
+        )
         return response
 
     @app.get("/api/state")
@@ -137,6 +444,12 @@ def create_app(root=None):
     async def upload(
         file: UploadFile = File(), source: str = Form(""), fixture: bool = Form(False)
     ):
+        if accounts and current_workflow.get().store.quota_limit is not None:
+            if fixture:
+                raise HTTPException(403, "不支持上传测试素材")
+            existing = workflow.list(assets, 10000)
+            if len(existing) >= 100 or sum(a["bytes"] for a in existing) >= 100 * 1024 * 1024:
+                raise HTTPException(403, "体验账号最多保存 100 张图片或 100 MB 素材")
         content = await file.read(MAX_BYTES + 1)
         return workflow.upload(content, file.content_type, source, fixture)
 
@@ -159,6 +472,46 @@ def create_app(root=None):
     def batch_submit(candidate_id: str, request: WebRequest):
         return submit_remaining(
             workflow, candidate_id, request.headers.get("x-external-confirmation", "")
+        )
+
+    @app.post("/api/content/series/{candidate_id}/preview")
+    def content_series_preview(candidate_id: str):
+        return preview_series(workflow, candidate_id)
+
+    @app.post("/api/content/series/{candidate_id}/submit")
+    def content_series_submit(candidate_id: str, request: WebRequest):
+        return submit_series(
+            workflow, candidate_id, request.headers.get("x-external-confirmation", "")
+        )
+
+    @app.get("/api/content/series/{candidate_id}")
+    def content_series_status(candidate_id: str):
+        return series_status(workflow, candidate_id)
+
+    @app.get("/api/content/series/{candidate_id}/export")
+    def content_series_export(candidate_id: str):
+        status = series_status(workflow, candidate_id)
+        if not status["complete"]:
+            raise HTTPException(409, "套图尚未全部完成")
+        first = workflow.get(candidates, candidate_id)
+        deck = first["data"]["deck"]
+        stream = io.BytesIO()
+        with zipfile.ZipFile(stream, "w", zipfile.ZIP_DEFLATED) as archive:
+            for index, aid in enumerate(
+                [status["first_asset_id"]] + [t["asset_id"] for t in status["tasks"]]
+            ):
+                archive.writestr(
+                    f"page-{index + 1:02d}.png",
+                    workflow.storage.read_asset(workflow.get(assets, aid)),
+                )
+            archive.writestr("发布正文.txt", deck["post_title"] + "\n\n" + deck["post_body"])
+            archive.writestr(
+                "核对说明.txt", "模型生成视觉背景，原始商品或截图及文字由程序叠放；发布前人工核对。"
+            )
+        return Response(
+            stream.getvalue(),
+            media_type="application/zip",
+            headers={"Content-Disposition": f'attachment; filename="CONTENT-{candidate_id}.zip"'},
         )
 
     @app.post("/api/candidates/{candidate_id}/cutout")
@@ -225,7 +578,10 @@ def create_app(root=None):
         candidate = detail["candidate"]
         fixture = detail["job"]["payload"]["fixture"]
         local = detail["job"]["payload"]["request"]["mode"] == "CUTOUT"
-        prefix = "LOCAL" if local else "FIXTURE" if fixture else "MODEL"
+        content_layout = detail["job"]["payload"]["request"]["mode"] == "CONTENT_RENDER"
+        prefix = (
+            "CONTENT" if content_layout else "LOCAL" if local else "FIXTURE" if fixture else "MODEL"
+        )
         notice = (
             "本地自动抠图，无外发；需核查分割边缘。"
             if local
@@ -233,6 +589,8 @@ def create_app(root=None):
             if fixture
             else "真实模型输出，需人工核验；费用以供应商账单为准。"
         )
+        if content_layout:
+            notice = "本地宣传排版；文案需人工核对。" + (FIXTURE_WARNING if fixture else "")
         manifest = {"notice": notice, "result": detail, "evaluations": []}
         if candidate:
             manifest["evaluations"] = [
@@ -243,7 +601,18 @@ def create_app(root=None):
             archive.writestr(
                 f"{prefix}-manifest.json", json.dumps(manifest, ensure_ascii=False, indent=2)
             )
-            if candidate:
+            if candidate and content_layout:
+                for index, aid in enumerate(candidate["data"]["pages"]):
+                    archive.writestr(
+                        f"page-{index + 1:02d}.png",
+                        workflow.storage.read_asset(workflow.get(assets, aid)),
+                    )
+                deck = candidate["data"]["deck"]
+                archive.writestr("发布正文.txt", deck["post_title"] + "\n\n" + deck["post_body"])
+                archive.writestr(
+                    "核对说明.txt", deck["review_notes"] + "\n" + candidate["data"]["warning"]
+                )
+            elif candidate:
                 item = workflow.get(assets, candidate["asset_id"])
                 archive.writestr(f"{prefix}-result.png", workflow.storage.read_asset(item))
                 archive.writestr("READ-ME.txt", notice + "\n" + candidate["data"]["warning"])
@@ -255,6 +624,8 @@ def create_app(root=None):
 
     @app.post("/api/demo")
     def demo():
+        if accounts:
+            raise HTTPException(404)
         # Drawn locally: these are test assets, never real model or merchant content.
         product = Image.new("RGBA", (600, 700), (0, 0, 0, 0))
         draw = ImageDraw.Draw(product)

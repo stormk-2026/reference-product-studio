@@ -1,0 +1,31 @@
+{% macro concept(p) %}
+<div class="concept-visual concept-{{ p.concept.type }}" role="img" aria-label="{{ p.name }}能力概念示意，非产品截图">
+  <span class="concept-label">{{ p.concept.label }}</span>
+  <div class="concept-hub"><span class="concept-orbit" aria-hidden="true"></span><strong>{{ p.concept.hub }}</strong></div>
+  <div class="concept-branches">{% for node in p.concept.nodes %}<span>{{ node }}</span>{% endfor %}</div>
+  <p class="concept-footer">{{ p.concept.footer }}</p>
+  <span class="concept-disclaimer">概念示意 · 非产品截图</span>
+</div>
+{% endmacro %}
+{% macro artwork(p) %}
+<div class="art-top"><span>{{ p.en }}</span><span aria-hidden="true">↗</span></div>
+{% if p.visual == 'phones' %}
+<div class="phone-triptych">{% for file,caption in p.images %}<div class="mini-phone"><img src="/static/portfolio/{{ file }}" alt="{{ caption }}" loading="lazy" width="{{ p.image_width }}" height="{{ p.image_height }}"></div>{% endfor %}</div>
+{% elif p.visual == 'posters' %}
+<div class="poster-collage">{% for file,caption in p.images %}<img src="/static/portfolio/{{ file }}" alt="{{ caption }}" loading="lazy" width="{{ p.image_width }}" height="{{ p.image_height }}">{% endfor %}</div>
+{% elif p.visual == 'landscape' %}
+<div class="landscape-collage">{% for idx in [1,0,2] %}<img src="/static/portfolio/{{ p.images[idx][0] }}" alt="{{ p.images[idx][1] }}" loading="lazy" width="{{ p.image_width }}" height="{{ p.image_height }}">{% endfor %}</div>
+{% elif p.visual == 'concept' %}{{ concept(p) }}
+{% else %}
+<div class="browser-preview"><div class="browser-dots" aria-hidden="true">● ● ●</div><img src="/static/portfolio/{{ p.images[0][0] }}" alt="{{ p.images[0][1] }}" loading="lazy" width="{{ p.image_width }}" height="{{ p.image_height }}"></div>
+{% endif %}
+{% endmacro %}
+{% macro card(p) %}
+<article class="project-card glass {% if p.slug == 'visual-workbench' %}workbench-card{% endif %}" data-category="{{ p.category }}" data-project="{{ p.slug }}">
+ <a class="project-art {{ p.tone }} art-{{ p.visual }}" href="/projects/{{ p.slug }}" aria-label="查看{{ p.name }}项目">{{ artwork(p) }}</a>
+ <div class="project-info"><div class="card-heading"><h3><a href="/projects/{{ p.slug }}">{{ p.name }}</a></h3><span class="badge">{{ p.status }}</span></div><p>{{ p.tagline }}</p>
+ {% if p.slug == 'visual-workbench' %}<p class="workbench-description">{{ p.description }}</p><div class="tag-row"><span>白底 / 场景图</span><span>工业草图</span><span>宣传图文</span></div><a class="button dark" href="/studio">进入工作台 ↗</a><small class="workbench-note">登录后创作 · 普通账号共 3 张图片体验额度</small>{% endif %}
+ <div class="card-bottom"><span>{{ p.kind }} · {{ p.period or p.tags[0] }}</span><a href="/projects/{{ p.slug }}">项目详情 ↗</a></div></div>
+</article>
+{% endmacro %}
+{% macro heading(kicker,title,body) %}<div class="page-heading shell"><span class="eyebrow">{{ kicker }}</span><h1>{{ title }}</h1><p>{{ body }}</p></div>{% endmacro %}
