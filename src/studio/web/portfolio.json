@@ -62,10 +62,10 @@
     "en": "FLOW",
     "category": "personal",
     "kind": "个人产品",
-    "status": "上架中",
+    "status": "Google Play 已上架",
     "tone": "sage",
     "tagline": "让注意力，慢慢回到自己。",
-    "description": "一个留给自己的安静空间。沉浸专注、随手记录心笺，再回看生活中一点一滴的沉淀。",
+    "description": "一个留给自己的安静空间。沉浸专注、随手记录心笺，再回看生活中一点一滴的沉淀。现已上架 Google Play，可前往商店下载安装。",
     "role": "独立开发 · 产品与全栈实现",
     "tags": [
       "Flutter",
@@ -87,7 +87,12 @@
       ]
     ],
     "video": "flow-demo.mp4",
-    "links": [],
+    "links": [
+      {
+        "name": "Google Play 下载",
+        "url": "https://play.google.com/store/apps/details?id=com.stormg.flower"
+      }
+    ],
     "story": "我想做一个轻一点的专注工具，让开始专注和记下念头，都成为自然的动作。界面尽量留白，用柔和的层次把注意力交还给内容。",
     "features": [
       [
@@ -104,7 +109,7 @@
       ],
       [
         "全栈独立交付",
-        "独立完成需求梳理、UI/UX 还原、Flutter 客户端、Python 后端 API、联调与部署。"
+        "独立完成需求梳理、UI/UX 还原、Flutter 客户端、Python 后端 API、联调与部署，并发布至 Google Play。"
       ]
     ],
     "visual": "phones",

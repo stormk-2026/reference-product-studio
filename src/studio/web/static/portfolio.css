@@ -135,3 +135,7 @@ dialog{color:var(--ink)}.contact-value{caret-color:var(--ink)}
 
 /* Keep the navigation centered when the header contains only the theme control. */
 @media(min-width:761px){.site-header{display:grid;grid-template-columns:1fr auto 1fr}.wordmark{justify-self:start}.header-actions{justify-self:end}}
+
+/* Released products: direct store access and three balanced desktop cards. */
+.store-link{display:inline-flex;margin-top:18px}
+@media(min-width:1100px){.home-deliveries .project-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.home-deliveries .project-art{height:320px}}

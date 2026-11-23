@@ -65,11 +65,15 @@ def test_public_media_range_and_upcoming_release_links(tmp_path):
         assert video.status_code == 206
         assert len(video.content) == 1024
         assert video.headers["content-type"] == "video/mp4"
-        for slug in ("flow", "seek"):
+        for slug in ("seek",):
             page = client.get("/projects/" + slug).text
             assert "上架中" in page
             assert '.apk"' not in page
-        assert 'preload="none"' in client.get("/projects/flow").text
+        flow_page = client.get("/projects/flow").text
+        assert "Google Play 已上架" in flow_page
+        assert "https://play.google.com/store/apps/details?id=com.stormg.flower" in flow_page
+        assert "正在准备上架" not in flow_page
+        assert 'preload="none"' in flow_page
         sitemap = client.get("/sitemap.xml").text
         assert "/studio<" not in sitemap
         assert "/api/" not in sitemap

@@ -9,7 +9,7 @@
 - `src/studio/web/static/portfolio/`：用户指定公开的流境、觅境截图，OkChat 三张宣传图及杭麻馆三张横版游戏截图、Trundertrack 三张界面截图、一段原始视频、工作台截图，以及 X 同款头像/横幅。禁止放入数据库、凭据或私人任务输出。
 - `src/studio/web/portfolio.py`：已确认社交链接。右下角已配置 GitHub、X、Telegram、微信与邮箱；按用户要求暂不显示 Discord。
 
-流境和觅境暂为「上架中」，只提供真实界面预览。发布后在对应项目的 links 增加真实商店 URL 并更新 status。若以后提供 APK，请先准备实际文件、版本与校验信息，点击仅发起下载，安装由用户在 Android 系统确认，网站不能静默安装。
+流境已上架 Google Play，商店地址为 https://play.google.com/store/apps/details?id=com.stormg.flower。首页「已经上线」区域首位展示流境，卡片与详情页提供商店下载入口，保留真实截图和演示。觅境仍为「上架中」，只提供真实界面预览。其他产品发布后，在对应项目的 links 增加真实商店 URL 并更新 status。若以后提供 APK，请先准备实际文件、版本与校验信息，点击仅发起下载，安装由用户在 Android 系统确认，网站不能静默安装。
 
 个人产品与商业参与项目分开归类。没有商店截图的项目采用文字封面，不以生成图冒充真实界面。OkChat 仅描述用户已确认的移动端参与范围，已按用户确认将简历中的 TokChat 统一为 OkChat；心犀仍为独立项目。
 
