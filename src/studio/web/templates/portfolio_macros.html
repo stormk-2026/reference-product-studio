@@ -25,7 +25,9 @@
  <a class="project-art {{ p.tone }} art-{{ p.visual }}" href="/projects/{{ p.slug }}" aria-label="查看{{ p.name }}项目">{{ artwork(p) }}</a>
  <div class="project-info"><div class="card-heading"><h3><a href="/projects/{{ p.slug }}">{{ p.name }}</a></h3><span class="badge">{{ p.status }}</span></div><p>{{ p.tagline }}</p>
  {% if p.slug == 'visual-workbench' %}<p class="workbench-description">{{ p.description }}</p><div class="tag-row"><span>白底 / 场景图</span><span>工业草图</span><span>宣传图文</span></div><a class="button dark" href="/studio">进入工作台 ↗</a><small class="workbench-note">登录后创作 · 普通账号共 3 张图片体验额度</small>{% endif %}
- {% if p.slug == 'flow' and p.links %}<a class="button dark store-link" href="{{ p.links[0].url }}" target="_blank" rel="noopener noreferrer">{{ p.links[0].name }} ↗</a>{% endif %}
+ {% for link in p.links if link.kind is defined and link.kind == 'store' %}
+ <a class="button dark store-link" href="{{ link.url }}" target="_blank" rel="noopener noreferrer">{{ link.name }} ↗</a>
+ {% endfor %}
  <div class="card-bottom"><span>{{ p.kind }} · {{ p.period or p.tags[0] }}</span><a href="/projects/{{ p.slug }}">项目详情 ↗</a></div></div>
 </article>
 {% endmacro %}

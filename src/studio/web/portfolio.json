@@ -90,7 +90,8 @@
     "links": [
       {
         "name": "Google Play 下载",
-        "url": "https://play.google.com/store/apps/details?id=com.stormg.flower"
+        "url": "https://play.google.com/store/apps/details?id=com.stormg.flower",
+        "kind": "store"
       }
     ],
     "story": "我想做一个轻一点的专注工具，让开始专注和记下念头，都成为自然的动作。界面尽量留白，用柔和的层次把注意力交还给内容。",
@@ -250,8 +251,9 @@
     "video": null,
     "links": [
       {
-        "name": "前往 Google Play",
-        "url": "https://play.google.com/store/apps/details?id=org.okchat.live"
+        "name": "Google Play 下载",
+        "url": "https://play.google.com/store/apps/details?id=org.okchat.live",
+        "kind": "store"
       }
     ],
     "story": "在海外社交产品中，通信体验需要同时照顾即时性、跨端状态与弱网环境。围绕会话、音视频和钱包交互推进移动端架构与功能迭代。",
@@ -307,8 +309,9 @@
     "video": null,
     "links": [
       {
-        "name": "前往 App Store",
-        "url": "https://apps.apple.com/cn/app/id6503023952"
+        "name": "App Store 下载",
+        "url": "https://apps.apple.com/cn/app/id6503023952",
+        "kind": "store"
       }
     ],
     "story": "面向地方市场的家乡棋牌游戏，围绕本地化玩法与长期使用体验迭代。担任 Android 与 Cocos 开发，参与需求分析、技术选型与核心功能实现。",
