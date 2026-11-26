@@ -1,5 +1,8 @@
 {% extends "portfolio_base.html" %}{% block content %}
-<section class="shell resume-sheet glass"><div class="resume-head"><div><span class="eyebrow">STORMG / RESUME</span><h1>郭慧康</h1><p>Android / Flutter · 移动端、全栈与 AI 产品开发</p><p>杭州 · <a href="mailto:gg5605568@gmail.com">gg5605568@gmail.com</a> · 微信 506145668</p></div><button class="button dark" id="print-resume" type="button">打印 / 保存 PDF</button></div>
+<section class="shell resume-sheet glass"><div class="resume-head"><div><span class="eyebrow">STORMG / RESUME</span><h1>郭慧康</h1><p>Android / Flutter · 移动端、全栈与 AI 产品开发</p><p>杭州 · <a href="mailto:gg5605568@gmail.com">gg5605568@gmail.com</a> · 微信 506145668</p></div><div class="resume-actions">
+  <button class="button dark" id="print-resume" type="button">中文 · 打印 / 保存 PDF</button>
+  <a class="button light" href="/static/portfolio/stormg-resume-en.pdf" download="stormg-resume-en.pdf" lang="en">Download English PDF</a>
+</div></div>
 <nav class="resume-sections" aria-label="简历章节"><a href="#resume-skills">核心能力</a><a href="#resume-projects">项目经历（{{ projects|length }}）</a><a href="#resume-career">工作经历</a><a href="#resume-education">教育</a></nav>
 <h2>个人简介</h2><p>{{ profile.intro }}</p>
 <section id="resume-skills"><h2>核心能力</h2><dl class="resume-skills">{% for title,body in profile.skills %}<div><dt>{{ title }}</dt><dd>{{ body }}</dd></div>{% endfor %}</dl></section>

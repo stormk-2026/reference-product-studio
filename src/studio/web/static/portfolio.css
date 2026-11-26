@@ -139,3 +139,7 @@ dialog{color:var(--ink)}.contact-value{caret-color:var(--ink)}
 /* Released products: direct store access and three balanced desktop cards. */
 .store-link{display:inline-flex;margin-top:18px}
 @media(min-width:1100px){.home-deliveries .project-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.home-deliveries .project-art{height:320px}}
+
+.resume-actions{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.resume-actions .button{margin:0}
+@media print{.resume-actions{display:none!important}}
