@@ -342,7 +342,7 @@ def create_app(root=None, *, auth_enabled=None, mailer=None, registration_enable
             request,
             "home",
             "stormg 的产品与实践",
-            "郭慧康 / stormg，Android、Flutter 开发者。探索流境、觅境与 AI 视觉工作台。",
+            "郭慧康 / stormg，Android、Flutter 与全栈开发者。探索流境、AI 视觉工作台和小红书小工具大签。",
         )
 
     @app.get("/projects")

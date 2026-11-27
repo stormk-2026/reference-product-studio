@@ -4,7 +4,7 @@
 
 stormg’s personal product portfolio and AI creation workbench. **[Visit the website](https://stormstudio.top)** · [Projects](https://stormstudio.top/projects) · [Online resume](https://stormstudio.top/resume).
 
-A glass-style portfolio with light and dark themes, remembered appearance preferences, and optional motion. Ten projects cover personal apps, commercial products, and engineering work. The AI visual workbench comes first, followed by projects with real screenshots: Flow, Seek, Trundertrack, OkChat, and Hangmaguan. Projects without screenshots use clearly labeled concept illustrations. Flow is now available on [Google Play](https://play.google.com/store/apps/details?id=com.stormg.flower), with a download link in the homepage’s released-products section. Its screenshots and demo remain available. Seek is still preparing for release; no download is offered yet.
+A glass-style portfolio with light and dark themes, remembered appearance preferences, and optional motion. Eleven projects cover personal apps, commercial products, and engineering work, including [Daqian](https://stormstudio.top/projects/daqian), a travel-preparation mini tool built for Xiaohongshu. The AI visual workbench comes first, followed by projects with real screenshots: Flow, Seek, Trundertrack, OkChat, and Hangmaguan. Projects without screenshots use clearly labeled concept illustrations. Flow is now available on [Google Play](https://play.google.com/store/apps/details?id=com.stormg.flower), with a download link in the homepage’s released-products section. Its screenshots and demo remain available. Seek is still preparing for release; no download is offered yet.
 
 ![Storm Studio personal portfolio](docs/images/portfolio-home.png)
 

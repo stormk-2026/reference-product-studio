@@ -77,6 +77,13 @@ PROJECTS = [
         "Integrated Kimi and Seedream with review steps, usage limits, and private asset storage.",
     ),
     (
+        "daqian",
+        "Daqian Travel Preparation Assistant",
+        "Independent developer | Nov 2026 | Xiaohongshu mini tool",
+        "Built destination search over an offline policy dataset, source attribution, and trip checklists. "
+        "Adapted the mobile UI and local storage and photo APIs for the Xiaohongshu container.",
+    ),
+    (
         "flow",
         "Flow",
         "Independent developer | May - Jul 2026 | Google Play",

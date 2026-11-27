@@ -4,7 +4,7 @@
 
 stormg（郭慧康）的个人产品站与 AI 创作工作台。**[访问网站](https://stormstudio.top)** · [作品集](https://stormstudio.top/projects) · [在线简历](https://stormstudio.top/resume)。
 
-支持明暗主题的毛玻璃界面展示个人产品、商业项目与工程经历。流境已上架 [Google Play](https://play.google.com/store/apps/details?id=com.stormg.flower)，首页「已经上线」区域提供下载入口，并保留真实截图与操作演示。觅境仍在上架中，暂不开放下载。OkChat、杭麻馆提供真实产品图片及商店链接；AI 视觉工作台位于作品首位。完整档案共10个项目，包含 Android / OpenClaw 远程播控、带真实截图的 Trundertrack DApp、心犀、海外发行、运营商大屏。作品详情与在线简历共用资料，缺少实际截图的项目明确展示能力概念示意。
+支持明暗主题的毛玻璃界面展示个人产品、商业项目与工程经历。流境已上架 [Google Play](https://play.google.com/store/apps/details?id=com.stormg.flower)，首页「已经上线」区域提供下载入口，并保留真实截图与操作演示。觅境仍在上架中，暂不开放下载。OkChat、杭麻馆提供真实产品图片及商店链接；AI 视觉工作台位于作品首位。近期加入小红书小工具[大签 · 出境准备助手](https://stormstudio.top/projects/daqian)。完整档案共11个项目，包含 Android / OpenClaw 远程播控、带真实截图的 Trundertrack DApp、心犀、海外发行、运营商大屏。作品详情与在线简历共用资料，缺少实际截图的项目明确展示能力概念示意。
 
 ![Storm Studio 个人站首页](docs/images/portfolio-home.png)
 
